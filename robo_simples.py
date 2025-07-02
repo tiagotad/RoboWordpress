@@ -20,8 +20,6 @@ except ImportError:
     from config import *
 
 # Validar configurações ao iniciar
-if not validar_configuracoes():
-    exit(1)
 
 # Inicializar cliente OpenAI
 client = OpenAI(

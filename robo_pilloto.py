@@ -22,8 +22,6 @@ except ImportError:
 from prompt_manager import get_prompt_titulo, get_prompt_artigo, get_system_prompts
 
 # Validar configurações ao iniciar
-if not validar_configuracoes():
-    exit(1)
 
 # Inicializar cliente OpenAI com configurações atualizadas
 client = OpenAI(

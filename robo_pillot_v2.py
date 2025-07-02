@@ -21,8 +21,6 @@ except ImportError:
     from config import *
 
 # Validar configurações ao iniciar
-if not validar_configuracoes():
-    exit(1)
 
 # 2. Carrega tópicos do Google Sheets
 def carregar_topicos():
