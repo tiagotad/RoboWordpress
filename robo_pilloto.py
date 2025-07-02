@@ -94,22 +94,20 @@ def carregar_topicos_sheets():
 
 topicos = carregar_topicos_sheets()
 
-# Se não conseguir carregar do Google Sheets, usar tópicos padrão
-if not topicos:
-    print("[AVISO] Usando tópicos padrão pois não foi possível carregar da planilha")
-    topicos = [
-        "Filmes e Cinema",
-        "Séries de TV", 
-        "História e Curiosidades",
-        "Viagem e Turismo",
-        "Livros e Literatura"
-    ]
-
 # Importar configurações de execução
 try:
     from config_execucao import get_configuracoes_execucao
     config_execucao = get_configuracoes_execucao()
     print(f"[INFO] Configurações de execução: {config_execucao}")
+    
+    # Usar tópicos da configuração ao invés da planilha
+    topicos_config = config_execucao.get('topicos_lista', [])
+    if topicos_config:
+        topicos = topicos_config
+        print(f"[INFO] Usando {len(topicos)} tópicos da configuração da interface")
+    else:
+        print("[AVISO] Nenhum tópico encontrado na configuração")
+        
 except ImportError:
     print("[AVISO] Arquivo config_execucao.py não encontrado, usando configurações padrão")
     config_execucao = {
@@ -117,6 +115,17 @@ except ImportError:
         'status_publicacao': 'draft',
         'quantidade_textos': 3
     }
+
+# Se não conseguir carregar do Google Sheets nem da configuração, usar tópicos padrão
+if not topicos:
+    print("[AVISO] Usando tópicos padrão")
+    topicos = [
+        "Filmes e Cinema",
+        "Séries de TV", 
+        "História e Curiosidades",
+        "Viagem e Turismo",
+        "Livros e Literatura"
+    ]
 
 # Limitar quantidade de tópicos conforme configuração
 quantidade_maxima = config_execucao.get('quantidade_textos', 3)
@@ -128,7 +137,9 @@ print("Tópicos que serão processados:")
 for i, t in enumerate(topicos, 1):
     print(f" {i}. {t}")
 
-# === GERAR TÍTULOS E ARTIGOS BASEADOS NOS TÓPICOS DA PLANILHA ===
+print("\n[INFO] *** TÓPICOS AGORA VÊM DA INTERFACE WEB - Google Sheets não é mais necessário ***")
+
+# === GERAR TÍTULOS E ARTIGOS BASEADOS NOS TÓPICOS DA INTERFACE ===
 for topico_geral in topicos:
     print(f"\n--- PROCESSANDO TÓPICO: {topico_geral} ---")
 

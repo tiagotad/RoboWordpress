@@ -86,7 +86,7 @@ st.markdown("""
 
 
 # Versão do app
-APP_VERSION = "1.0.3 - Streamlit Cloud Patch 2025-07-02"
+APP_VERSION = "2.0.0 - Interface de Tópicos Integrada 2025-07-02"
 
 # Título principal com versão
 st.markdown(f'<h1 class="main-header">🤖 RoboWordpress - Painel de Controle <span style="font-size:1.2rem;color:#888;">v{APP_VERSION}</span></h1>', unsafe_allow_html=True)
@@ -123,7 +123,7 @@ if is_streamlit_cloud:
     # Verificar se secrets estão configuradas
     missing_secrets = []
     try:
-        required_secrets = ['WP_URL', 'WP_USER', 'WP_PASSWORD', 'OPENAI_API_KEY', 'GOOGLE_SHEET_ID', 'GOOGLE_SHEET_NAME']
+        required_secrets = ['WP_URL', 'WP_USER', 'WP_PASSWORD', 'OPENAI_API_KEY']
         for secret in required_secrets:
             if secret not in st.secrets or not st.secrets.get(secret):
                 missing_secrets.append(secret)
@@ -153,8 +153,6 @@ if is_streamlit_cloud:
             WP_USER = "seu_usuario"
             WP_PASSWORD = "sua_senha"
             OPENAI_API_KEY = "sk-proj-sua-chave..."
-            GOOGLE_SHEET_ID = "1ABC123DEF456..."
-            GOOGLE_SHEET_NAME = "Nome da Planilha"
             ```
 
             7. **Clique "Save"**
@@ -186,40 +184,23 @@ def verificar_configuracoes():
             WP_USER = st.secrets.get('WP_USER', '')
             WP_PASSWORD = st.secrets.get('WP_PASSWORD', '')
             OPENAI_API_KEY = st.secrets.get('OPENAI_API_KEY', '')
-            GOOGLE_SHEET_NAME = st.secrets.get('GOOGLE_SHEET_NAME', st.secrets.get('GOOGLE_SHEET', ''))
-            GOOGLE_SHEET_ID = st.secrets.get('GOOGLE_SHEET_ID', '')
-
-            # Para credenciais Google: considerar válido se ambos presentes
-            credentials_ok = bool(GOOGLE_SHEET_ID and GOOGLE_SHEET_NAME)
         else:
             # Importar config local
             sys.path.append(os.getcwd())
-            from config import WP_URL, WP_USER, WP_PASSWORD, OPENAI_API_KEY, GOOGLE_SHEET_NAME, GOOGLE_SHEET_ID
+            from config import WP_URL, WP_USER, WP_PASSWORD, OPENAI_API_KEY
 
-            # Para credenciais Google: verificar se arquivo existe OU se tem credenciais nos secrets
-            credentials_ok = os.path.exists('credenciais_google.json')
-            try:
-                if hasattr(st, 'secrets') and ('GOOGLE_CREDENTIALS' in st.secrets or 'GOOGLE_CREDENTIALS_JSON' in st.secrets):
-                    credentials_ok = True
-            except Exception:
-                pass
-
-        # Verificações mais flexíveis
+        # Verificações essenciais (sem Google Sheets)
         wp_ok = WP_URL not in ['https://exemplo.com', 'https://seu-site.com', '', None] and WP_PASSWORD not in ['senha', 'sua_senha', '', None]
         openai_ok = OPENAI_API_KEY and len(OPENAI_API_KEY) > 20 and OPENAI_API_KEY.startswith('sk-')
-        sheets_ok = bool(GOOGLE_SHEET_NAME) and bool(GOOGLE_SHEET_ID)
 
         status = {
             'wordpress': wp_ok,
-            'openai': openai_ok,
-            'google_sheets': sheets_ok,
-            'credentials_file': credentials_ok
+            'openai': openai_ok
         }
 
         return status, {
             'wp_url': WP_URL,
             'wp_user': WP_USER,
-            'google_sheet': GOOGLE_SHEET_NAME,
             'openai_key': f"{OPENAI_API_KEY[:15]}..." if OPENAI_API_KEY and len(OPENAI_API_KEY) > 15 else "Não configurada"
         }
     except Exception as e:
@@ -236,9 +217,7 @@ if status:
         icon = "✅" if value else "❌"
         labels = {
             'wordpress': 'WordPress',
-            'openai': 'OpenAI',
-            'google_sheets': 'Google Sheets',
-            'credentials_file': 'Credenciais Google'
+            'openai': 'OpenAI'
         }
         st.sidebar.markdown(f"{icon} {labels[key]}")
     
@@ -246,7 +225,7 @@ if status:
         st.sidebar.markdown("### 📋 Detalhes")
         st.sidebar.markdown(f"**Site:** {config_info['wp_url']}")
         st.sidebar.markdown(f"**Usuário:** {config_info['wp_user']}")
-        st.sidebar.markdown(f"**Planilha:** {config_info['google_sheet']}")
+        st.sidebar.markdown("**Tópicos:** Configurados na interface")
 else:
     st.sidebar.error(f"⚠️ {config_info}")
 
@@ -544,6 +523,25 @@ with col1:
     # Configurações para execução
     st.markdown("### ⚙️ Configurações de Execução")
     
+    # Campo para inserir tópicos diretamente
+    st.markdown("#### 📝 Tópicos para Gerar Conteúdo")
+    topicos_input = st.text_area(
+        "Digite os tópicos (um por linha):",
+        value="Filmes e Cinema\nSéries de TV\nHistória e Curiosidades\nViagem e Turismo\nLivros e Literatura",
+        height=120,
+        help="Digite cada tópico em uma linha separada. Estes tópicos serão usados para gerar os títulos e artigos."
+    )
+    
+    # Processar tópicos inseridos
+    topicos_lista = [t.strip() for t in topicos_input.split('\n') if t.strip()]
+    
+    if topicos_lista:
+        st.success(f"✅ {len(topicos_lista)} tópicos configurados: {', '.join(topicos_lista[:3])}{'...' if len(topicos_lista) > 3 else ''}")
+    else:
+        st.warning("⚠️ Adicione pelo menos um tópico para continuar")
+    
+    st.markdown("---")
+    
     col_config1, col_config2, col_config3 = st.columns(3)
     
     with col_config1:
@@ -563,18 +561,20 @@ with col1:
         )
     
     with col_config3:
+        quantidade_maxima = min(len(topicos_lista), 10) if topicos_lista else 3
         quantidade_textos = st.number_input(
             "📝 Quantidade de Textos:",
             min_value=1,
-            max_value=10,
-            value=3,
-            help="Número de textos que serão gerados (baseado nos tópicos da planilha)"
+            max_value=quantidade_maxima,
+            value=min(3, quantidade_maxima),
+            help=f"Número de textos que serão gerados (máximo: {quantidade_maxima} baseado nos tópicos inseridos)"
         )
     
     # Salvar configurações na sessão
     st.session_state['categoria_wp'] = categoria_wp
     st.session_state['status_publicacao'] = status_publicacao
     st.session_state['quantidade_textos'] = quantidade_textos
+    st.session_state['topicos_lista'] = topicos_lista[:quantidade_textos]  # Limitar aos selecionados
     
     st.markdown("---")
     
@@ -607,9 +607,14 @@ with col1:
             
             with col_robot2:
                 if st.button(f"▶️ Executar", key=f"btn_{robot['arquivo']}", use_container_width=True):
-                    if status and all(status.values()):
+                    if not topicos_lista:
+                        st.warning("⚠️ Adicione pelo menos um tópico antes de executar!")
+                    elif status and all(status.values()):
                         # Salvar configurações antes de executar
                         try:
+                            topicos_para_salvar = topicos_lista[:quantidade_textos]
+                            topicos_str = '", "'.join(topicos_para_salvar)
+                            
                             with open('config_execucao.py', 'w') as f:
                                 f.write(f"""# Configurações de execução vindas do app.py
 # Este arquivo é gerado automaticamente pelo app.py
@@ -618,21 +623,25 @@ with col1:
 CATEGORIA_WP = "{categoria_wp}"
 STATUS_PUBLICACAO = "{status_publicacao}"  # "draft" ou "publish"
 QUANTIDADE_TEXTOS = {quantidade_textos}
+TOPICOS_LISTA = ["{topicos_str}"]
 
 def get_configuracoes_execucao():
     \"\"\"Retorna as configurações de execução\"\"\"
     return {{
         'categoria_wp': CATEGORIA_WP,
         'status_publicacao': STATUS_PUBLICACAO,
-        'quantidade_textos': QUANTIDADE_TEXTOS
+        'quantidade_textos': QUANTIDADE_TEXTOS,
+        'topicos_lista': TOPICOS_LISTA
     }}
 
-def set_configuracoes_execucao(categoria_wp="Others", status_publicacao="draft", quantidade_textos=3):
+def set_configuracoes_execucao(categoria_wp="Others", status_publicacao="draft", quantidade_textos=3, topicos_lista=None):
     \"\"\"Define as configurações de execução\"\"\"
-    global CATEGORIA_WP, STATUS_PUBLICACAO, QUANTIDADE_TEXTOS
+    global CATEGORIA_WP, STATUS_PUBLICACAO, QUANTIDADE_TEXTOS, TOPICOS_LISTA
     CATEGORIA_WP = categoria_wp
     STATUS_PUBLICACAO = status_publicacao
     QUANTIDADE_TEXTOS = quantidade_textos
+    if topicos_lista:
+        TOPICOS_LISTA = topicos_lista
 """)
                         except Exception as e:
                             st.error(f"Erro ao salvar configurações: {e}")
@@ -640,7 +649,7 @@ def set_configuracoes_execucao(categoria_wp="Others", status_publicacao="draft",
                         # Container para logs em tempo real
                         log_container = st.container()
                         
-                        st.info(f"🎯 Executando com: Categoria={categoria_wp}, Status={status_publicacao}, Quantidade={quantidade_textos}")
+                        st.info(f"🎯 Executando com: Categoria={categoria_wp}, Status={status_publicacao}, Tópicos={len(topicos_para_salvar)}")
                         
                         # Executar o robô com logs em tempo real
                         resultado = executar_comando_com_logs(robot['arquivo'], robot['nome'], log_container)
@@ -663,11 +672,6 @@ with col2:
             'nome': 'Teste WordPress',
             'arquivo': 'teste_conexao_wordpress.py',
             'descricao': 'Verifica conexão com WordPress'
-        },
-        {
-            'nome': 'Teste Google Sheets',
-            'arquivo': 'teste_sheets.py',
-            'descricao': 'Verifica conexão com planilha'
         },
         {
             'nome': 'Teste OpenAI + WordPress',
@@ -711,12 +715,8 @@ with st.expander("🔧 Configurar Credenciais"):
     - `WP_USER`: Usuário do WordPress
     - `WP_PASSWORD`: Senha ou Application Password
     - `OPENAI_API_KEY`: Sua chave da OpenAI
-    - `GOOGLE_SHEET_NAME`: Nome da planilha Google
     
-    3. **Adicione credenciais do Google:**
-    - Baixe o arquivo JSON das credenciais
-    - Renomeie para `credenciais_google.json`
-    - Coloque na pasta do projeto
+    **📝 Nota:** Os tópicos agora são configurados diretamente na interface web acima, não precisando mais do Google Sheets!
     """)
 
 # Footer
