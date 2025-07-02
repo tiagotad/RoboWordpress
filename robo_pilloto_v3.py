@@ -7,7 +7,6 @@ from requests.auth import HTTPBasicAuth
 import gspread
 from google.oauth2.service_account import Credentials
 
-
 from config import *
 from prompt_manager import get_prompt_titulo, get_prompt_artigo, get_system_prompts
 
@@ -88,29 +87,14 @@ for topico_geral in topicos:
 
     try:
         # === GERAR TÍTULO ESPECÍFICO BASEADO NO TÓPICO GERAL ===
-        prompt_titulo = f"""
-Você é um especialista em criação de conteúdo para entretenimento e estilo de vida. Com base no tópico geral “{topico_geral}”, crie UM título específico e otimizado para SEO em Portugues, voltado para blog.
-
-O título deve:
-	•	Focar em tendências recentes, notícias ou acontecimentos nas áreas de: filmes, séries, livros, viagens, história ou cultura pop
-	•	Basear-se em eventos atuais de fontes confiáveis como IMDb, Netflix, Amazon Prime, Disney+, grandes editoras, sites de viagem ou descobertas históricas
-	•	Ser altamente pesquisável e atrativo para SEO
-	•	Ter como público-alvo entusiastas do entretenimento e o público geral
-	•	Ter entre 50 e 80 caracteres, ideal para SEO
-	•	Incluir palavras-chave que estão em alta nas buscas
-
-Exemplos de bons títulos:
-- "As séries mais assistidas da Netflix em 2024: Guia completo de ranking"
-- "10 filmes que estreiam em 2025 e que todo mundo vai comentar"
-- "As histórias reais por trás de 5 documentários criminais da Netflix"
-
-Retorne APENAS o título, nada mais.
-"""
+        print("[INFO] Carregando prompt personalizado para título...")
+        prompt_titulo = get_prompt_titulo(topico_geral)
+        system_prompts = get_system_prompts()
 
         response_titulo = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "Você é um jornalista especializado em entretenimento e estrategista de conteúdo SEO, com profundo conhecimento em filmes, séries de TV, livros, viagens e tendências da cultura pop."},
+                {"role": "system", "content": system_prompts['titulo']},
                 {"role": "user", "content": prompt_titulo}
             ],
             temperature=0.8,  # Mais criatividade para títulos cativantes
@@ -121,67 +105,13 @@ Retorne APENAS o título, nada mais.
         print(f"[INFO] Título gerado: {titulo_especifico}")
 
         # === GERAR ARTIGO BASEADO EM PESQUISA ===
-        prompt_artigo = f"""
-Escreva um post de blog completo e otimizado para SEO com 1000 a 1200 palavras, intitulado: "{titulo_especifico}"
-
- Fontes Internacionais:
-	•	Filmes/Séries: IMDb, Rotten Tomatoes, Netflix, Disney+, HBO Max, Amazon Prime
-	•	Livros: Goodreads, Publishers Weekly, New York Times Book Review
-	•	Viagens: Lonely Planet, National Geographic, TripAdvisor, sites oficiais de turismo
-	•	História: National Geographic, History Channel, Smithsonian, descobertas arqueológicas
-	•	Cultura Pop: Entertainment Weekly, Variety, The Hollywood Reporter
-
- Fontes Brasileiras:
-	•	Filmes/Séries: AdoroCinema, Omelete, Canaltech, TecMundo, Rolling Stone Brasil
-	•	Livros: PublishNews, Revista Quatro Cinco Um, Estadão, Folha Ilustrada
-	•	Viagens: Melhores Destinos, Viaje na Viagem, UOL Viagem, Ministério do Turismo
-	•	História/Cultura: Aventuras na História, Revista Superinteressante, Brasil Escola, Globo História
-
-ESTRUTURA DO ARTIGO E REQUISITOS DE SEO:
-	1.	Introdução Atrativa (150–200 palavras):
-	•	Comece com um fato envolvente, estatística ou evento recente
-	•	Inclua a palavra-chave principal naturalmente no primeiro parágrafo
-	•	Deixe claro o que o leitor aprenderá no artigo
-	2.	Conteúdo Principal (700–800 palavras):
-	•	Use subtítulos H2 e H3 com palavras-chave
-	•	Divida o conteúdo em 3 ou 4 seções principais
-	•	Use listas com marcadores e numeradas
-	•	Adicione dados específicos, datas, nomes e estatísticas
-	•	Utilize palavras-chave semânticas naturalmente ao longo do texto
-	3.	Valor Prático:
-	•	Ofereça dicas, recomendações ou guias acionáveis
-	•	Inclua seções como “o que assistir”, “onde visitar” ou “como fazer”
-	•	Crie listas comparativas ou rankings sempre que for relevante
-	4.	Conclusão Envolvente (100–150 palavras):
-	•	Resuma os principais pontos do artigo
-	•	Inclua uma chamada para ação ou uma pergunta para engajamento
-	•	Encerre com uma observação voltada para o futuro
-
-⸻
-
-OTIMIZAÇÃO SEO:
-	•	Densidade da palavra-chave: 1–2%
-	•	Inclua palavras-chave relacionadas e sinônimos
-	•	Use linguagem compatível com meta descriptions
-	•	Crie conteúdo que responda a perguntas comuns de busca
-	•	Inclua números e superlativos nos subtítulos
-
-⸻
-
-TOM E ESTILO:
-	•	Conversacional e informativo
-	•	Entusiástico sobre o tema
-	•	Acessível para o público geral
-	•	Inclua personalidade e opiniões
-	•	Use elementos de storytelling (narrativa)
-Foco do topico: {topico_geral}
-
-Torne o conteúdo envolvente, informativo e altamente compartilhável, mantendo as melhores práticas de SEO."""
+        print("[INFO] Carregando prompt personalizado para artigo...")
+        prompt_artigo = get_prompt_artigo(titulo_especifico, topico_geral)
 
         response_artigo = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "Você é um jornalista especializado em entretenimento e estilo de vida, com amplo conhecimento em filmes, séries de TV, livros, destinos de viagem e tendências culturais. Você cria conteúdos altamente envolventes e otimizados para SEO, que têm bom desempenho no Google e mantêm os leitores engajados."},
+                {"role": "system", "content": system_prompts['artigo']},
                 {"role": "user", "content": prompt_artigo}
             ],
             temperature=0.7,  # Balanceado para criatividade e precisão
@@ -233,6 +163,7 @@ Torne o conteúdo envolvente, informativo e altamente compartilhável, mantendo 
         response_wp.raise_for_status()
 
         print(f"[✔] Rascunho salvo com sucesso na categoria 'Others': {titulo_especifico}")
+        print(f"[INFO] Usando prompts personalizados do arquivo prompts.json")
 
     except Exception as e:
         print(f"[ERRO ao gerar/publicar '{titulo_especifico if 'titulo_especifico' in locals() else topico_geral}']: {e}")
@@ -240,3 +171,4 @@ Torne o conteúdo envolvente, informativo e altamente compartilhável, mantendo 
     time.sleep(10)  # Evita bloqueios na API do WordPress
 
 print("\n--- FINALIZADO COM SUCESSO ---")
+print("[INFO] 🎯 Para editar os prompts, use a interface web: streamlit run app.py")

@@ -8,28 +8,38 @@ Este projeto é um sistema automatizado que:
 - Lê tópicos de uma planilha do Google Sheets
 - Gera conteúdo otimizado para SEO usando OpenAI
 - Publica automaticamente no WordPress
+- **🎯 Interface visual para edição de prompts personalizáveis**
 - Inclui testes de conexão e funcionalidade
 
 ## 🚀 Funcionalidades
 
+- ✅ **Interface Web Streamlit** - Painel de controle amigável com editor visual
+- ✅ **Editor de Prompts Personalizáveis** - Controle total sobre como a IA gera conteúdo
 - ✅ Integração com Google Sheets para gerenciar tópicos
 - ✅ Geração automática de conteúdo usando OpenAI GPT
 - ✅ Publicação automática no WordPress
-- ✅ Testes de conectividade
+- ✅ Testes de conectividade integrados
 - ✅ Scripts de execução automatizada
+- ✅ Deploy fácil para acesso remoto
 
 ## 📁 Estrutura do Projeto
 
 ```
 RoboWordpress/
+├── app.py                 # Interface web Streamlit com editor de prompts
+├── robo_pilloto_v3.py     # Robô que usa prompts personalizáveis
 ├── robo_pillot_v2.py      # Versão principal do robô
 ├── robo_pilloto.py        # Versão alternativa
 ├── robo_simples.py        # Versão simplificada
+├── prompt_manager.py      # Sistema de gerenciamento de prompts
+├── prompts.json          # Arquivo de prompts personalizáveis
 ├── teste_conexao_wordpress.py  # Teste de conexão WordPress
 ├── teste_sheets.py        # Teste de conexão Google Sheets
 ├── teste_wordpress.py     # Testes WordPress
-├── teste.py               # Testes gerais
-├── executar_teste.sh      # Script de execução
+├── config.py             # Configurações do projeto
+├── .env                  # Variáveis de ambiente (credenciais)
+├── setup.sh              # Script de configuração automática
+├── start_web.sh          # Script para iniciar interface web
 └── requirements.txt       # Dependências Python
 ```
 
@@ -87,12 +97,56 @@ pip install -r requirements.txt
 
 ## 📝 Uso
 
-### Execução Principal
+### 🌐 Interface Web (Recomendada para Estagiários)
+
+**Interface visual completa com editor de prompts:**
+
+```bash
+# Iniciar interface web
+./start_web.sh
+
+# Ou manualmente:
+streamlit run app.py
+```
+
+**Acesse:** http://localhost:8501
+
+#### 🎯 Editor de Prompts Personalizáveis
+
+A interface inclui um **editor visual** que permite:
+
+- ✏️  **Editar prompts** para títulos e artigos
+- 🎭 **Configurar personalidade da IA** (system prompts)
+- 👁️  **Preview** das mudanças antes de salvar
+- 💾 **Salvar** alterações instantaneamente
+- 🔄 **Restaurar** prompts padrão facilmente
+
+#### 🤖 Robôs Disponíveis
+
+1. **Robô Personalizável (v3)** - 🎯 Recomendado
+   - Usa os prompts editados na interface
+   - Totalmente customizável
+   
+2. **Robô Principal (v2)** - 🤖 Completo
+   - Versão com todas as funcionalidades
+   
+3. **Robô Simples** - ⚡ Para testes
+   - Versão simplificada para testes rápidos
+
+#### 🧪 Testes Integrados
+
+- **Teste WordPress** - Verifica conexão
+- **Teste Google Sheets** - Valida planilha
+- **Teste Completo** - OpenAI + WordPress
+
+### 💻 Linha de Comando (Avançado)
+
+#### Execução Principal
 ```bash
 python robo_pillot_v2.py
 ```
 
-### Testes
+#### Testes
 ```bash
 # Teste de conexão WordPress
 python teste_conexao_wordpress.py
@@ -154,6 +208,30 @@ Se você encontrar algum problema ou tiver dúvidas:
 - [ ] Agendamento de publicações
 - [ ] Análise de performance SEO
 - [ ] Integração com mais APIs de IA
+
+## 🌐 Deploy para Acesso Remoto
+
+### Para Estagiários e Equipe
+
+O projeto inclui uma interface web moderna que pode ser acessada remotamente:
+
+**Opções de Deploy:**
+
+1. **🥇 Streamlit Cloud (Gratuito)**
+   - Deploy automático do GitHub
+   - URL pública: `https://seu-app.streamlit.app`
+   - Configuração em 5 minutos
+
+2. **🥈 Rede Local**
+   - Rodar em seu computador
+   - Estagiário acessa via IP local
+   - Ideal para uso interno
+
+3. **🥉 VPS/Servidor**
+   - Controle total
+   - Domínio personalizado
+
+**Ver guia completo:** [DEPLOY.md](DEPLOY.md)
 
 ---
 

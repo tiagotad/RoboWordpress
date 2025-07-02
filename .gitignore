@@ -5,6 +5,9 @@ config.py
 credenciais_google.json
 animated-sign-*.json
 
+# Prompts personalizados (manter prompts.json default)
+# prompts.json será commitado como template
+
 # Arquivos Python
 __pycache__/
 *.py[cod]

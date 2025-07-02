@@ -1,0 +1,431 @@
+import streamlit as st
+import pandas as pd
+import time
+import sys
+import os
+from datetime import datetime
+import subprocess
+import threading
+from io import StringIO
+import json
+
+# Configurar página
+st.set_page_config(
+    page_title="RoboWordpress - Painel de Controle",
+    page_icon="🤖",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# CSS personalizado
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 2.5rem;
+        color: #1f77b4;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .status-box {
+        padding: 1rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+    }
+    .status-success {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+    .status-warning {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+    }
+    .status-error {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+    .robot-card {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 10px;
+        border-left: 4px solid #1f77b4;
+        margin: 1rem 0;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Título principal
+st.markdown('<h1 class="main-header">🤖 RoboWordpress - Painel de Controle</h1>', unsafe_allow_html=True)
+
+# Sidebar com informações
+st.sidebar.markdown("## 📊 Status do Sistema")
+
+# Verificar configurações
+def verificar_configuracoes():
+    """Verifica se todas as configurações estão corretas"""
+    try:
+        # Importar config local
+        sys.path.append(os.getcwd())
+        from config import WP_URL, WP_USER, WP_PASSWORD, OPENAI_API_KEY, GOOGLE_SHEET_NAME
+        
+        status = {
+            'wordpress': WP_URL != 'https://exemplo.com' and WP_PASSWORD != 'senha',
+            'openai': len(OPENAI_API_KEY) > 20,
+            'google_sheets': GOOGLE_SHEET_NAME != 'nome_da_sua_planilha',
+            'credentials_file': os.path.exists('credenciais_google.json')
+        }
+        
+        return status, {
+            'wp_url': WP_URL,
+            'wp_user': WP_USER,
+            'google_sheet': GOOGLE_SHEET_NAME,
+            'openai_key': f"{OPENAI_API_KEY[:15]}..." if len(OPENAI_API_KEY) > 15 else "Não configurada"
+        }
+    except Exception as e:
+        return None, f"Erro ao carregar configurações: {str(e)}"
+
+# Verificar status
+status, config_info = verificar_configuracoes()
+
+if status:
+    # Exibir status na sidebar
+    st.sidebar.markdown("### 🔧 Configurações")
+    
+    for key, value in status.items():
+        icon = "✅" if value else "❌"
+        labels = {
+            'wordpress': 'WordPress',
+            'openai': 'OpenAI',
+            'google_sheets': 'Google Sheets',
+            'credentials_file': 'Credenciais Google'
+        }
+        st.sidebar.markdown(f"{icon} {labels[key]}")
+    
+    if isinstance(config_info, dict):
+        st.sidebar.markdown("### 📋 Detalhes")
+        st.sidebar.markdown(f"**Site:** {config_info['wp_url']}")
+        st.sidebar.markdown(f"**Usuário:** {config_info['wp_user']}")
+        st.sidebar.markdown(f"**Planilha:** {config_info['google_sheet']}")
+else:
+    st.sidebar.error(f"⚠️ {config_info}")
+
+# Função para executar comandos
+def executar_comando(comando, nome_processo):
+    """Executa um comando e retorna o resultado"""
+    try:
+        # Ativar ambiente virtual e executar comando
+        cmd_completo = f"source venv/bin/activate && {comando}"
+        result = subprocess.run(cmd_completo, shell=True, capture_output=True, text=True, timeout=300)
+        
+        return {
+            'sucesso': result.returncode == 0,
+            'stdout': result.stdout,
+            'stderr': result.stderr,
+            'codigo': result.returncode
+        }
+    except subprocess.TimeoutExpired:
+        return {
+            'sucesso': False,
+            'stdout': '',
+            'stderr': 'Processo excedeu tempo limite (5 minutos)',
+            'codigo': -1
+        }
+    except Exception as e:
+        return {
+            'sucesso': False,
+            'stdout': '',
+            'stderr': f'Erro ao executar: {str(e)}',
+            'codigo': -1
+        }
+
+# Importar módulo de prompts
+try:
+    from prompt_manager import carregar_prompts, salvar_prompts, validar_prompts
+except ImportError:
+    st.error("Erro ao importar módulo de prompts. Verifique se prompt_manager.py existe.")
+    st.stop()
+
+# Layout principal
+st.markdown("## 📝 Editor de Prompts Personalizáveis")
+
+# Editor de prompts em destaque
+with st.expander("🎯 CONFIGURE OS PROMPTS DA IA - Clique para abrir", expanded=True):
+    st.markdown("""
+    ### 🔧 Personalize como a IA gera conteúdo
+    
+    **🎯 IMPORTANTE:** Use o **Robô Personalizável (v3)** para aplicar os prompts editados aqui.
+    
+    Controle como a IA:
+    - **🎭 Gera títulos** baseados nos tópicos da planilha
+    - **📝 Cria artigos** completos e otimizados para SEO
+    """)
+    
+    # Carregar prompts atuais
+    prompts_atuais = carregar_prompts()
+    
+    # Tabs para organizar os prompts
+    tab_titulo, tab_artigo = st.tabs(["📰 Prompt para Títulos", "📄 Prompt para Artigos"])
+    
+    with tab_titulo:
+        st.markdown("### 📰 Como a IA deve gerar títulos")
+        st.markdown("**Variável disponível:** `{topico_geral}` (será substituído pelo tópico da planilha)")
+        
+        prompt_titulo_novo = st.text_area(
+            "Edite o prompt do título:",
+            value=prompts_atuais.get('prompt_titulo', ''),
+            height=250,
+            help="Este prompt controla como a IA gera títulos baseados no tópico da planilha Google Sheets",
+            key="prompt_titulo_main"
+        )
+        
+        # System prompt para título
+        system_titulo_novo = st.text_area(
+            "Personalidade da IA para títulos:",
+            value=prompts_atuais.get('system_prompt_titulo', ''),
+            height=80,
+            help="Define como a IA deve se comportar ao gerar títulos",
+            key="system_titulo_main"
+        )
+    
+    with tab_artigo:
+        st.markdown("### 📄 Como a IA deve gerar artigos completos")
+        st.markdown("**Variáveis disponíveis:** `{titulo_especifico}` (título gerado) e `{topico_geral}` (tópico da planilha)")
+        
+        prompt_artigo_novo = st.text_area(
+            "Edite o prompt do artigo:",
+            value=prompts_atuais.get('prompt_artigo', ''),
+            height=300,
+            help="Este prompt controla como a IA escreve artigos completos baseados no título gerado",
+            key="prompt_artigo_editor"
+        )
+        
+        # System prompt para artigo
+        system_artigo_novo = st.text_area(
+            "Personalidade da IA para artigos:",
+            value=prompts_atuais.get('system_prompt_artigo', ''),
+            height=80,
+            help="Define como a IA deve se comportar ao gerar artigos",
+            key="system_artigo_editor"
+        )
+    
+    # Botões de ação em destaque
+    col_save, col_preview, col_reset = st.columns(3)
+    
+    with col_save:
+        if st.button("💾 SALVAR PROMPTS", type="primary", use_container_width=True):
+            novos_prompts = {
+                'prompt_titulo': prompt_titulo_novo,
+                'prompt_artigo': prompt_artigo_novo,
+                'system_prompt_titulo': system_titulo_novo,
+                'system_prompt_artigo': system_artigo_novo
+            }
+            
+            # Validar prompts
+            erros = validar_prompts(novos_prompts)
+            
+            if erros:
+                st.error("❌ Erros encontrados nos prompts:")
+                for campo, erro in erros.items():
+                    st.error(f"**{campo}:** {erro}")
+            else:
+                if salvar_prompts(novos_prompts):
+                    st.success("✅ Prompts salvos com sucesso!")
+                    st.success("🎯 Use o 'Robô Personalizável (v3)' para aplicar os novos prompts!")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("❌ Erro ao salvar prompts.")
+    
+    with col_preview:
+        if st.button("👀 PREVIEW", use_container_width=True):
+            st.markdown("### 🔍 Preview dos Prompts")
+            
+            exemplo_topico = "Filmes e Cinema"
+            exemplo_titulo = "Os 10 Filmes Mais Aguardados de 2025"
+            
+            st.markdown("**📰 Preview Prompt Título:**")
+            try:
+                preview_titulo = prompt_titulo_novo.format(topico_geral=exemplo_topico)
+                st.code(preview_titulo[:300] + "..." if len(preview_titulo) > 300 else preview_titulo)
+            except Exception as e:
+                st.error(f"Erro no prompt título: {e}")
+            
+            st.markdown("**📄 Preview Prompt Artigo:**")
+            try:
+                preview_artigo = prompt_artigo_novo.format(
+                    titulo_especifico=exemplo_titulo,
+                    topico_geral=exemplo_topico
+                )
+                st.code(preview_artigo[:400] + "..." if len(preview_artigo) > 400 else preview_artigo)
+            except Exception as e:
+                st.error(f"Erro no prompt artigo: {e}")
+    
+    with col_reset:
+        if st.button("🔄 Restaurar Padrão", use_container_width=True):
+            if st.session_state.get('confirm_reset'):
+                # Carregar prompts padrão
+                from prompt_manager import get_prompts_padrao
+                prompts_padrao = get_prompts_padrao()
+                
+                if salvar_prompts(prompts_padrao):
+                    st.success("✅ Prompts restaurados para o padrão!")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("❌ Erro ao restaurar prompts.")
+                
+                st.session_state['confirm_reset'] = False
+            else:
+                st.session_state['confirm_reset'] = True
+                st.warning("⚠️ Clique novamente para confirmar a restauração.")
+
+# Separador
+st.markdown("---")
+
+col1, col2 = st.columns([2, 1])
+
+with col1:
+    st.markdown("## 🚀 Executar Robôs")
+    
+    # Cards dos robôs
+    robots = [
+        {
+            'nome': 'Robô Principal (v2)',
+            'arquivo': 'robo_pillot_v2.py',
+            'descricao': 'Versão principal com todas as funcionalidades',
+            'icon': '🤖'
+        },
+        {
+            'nome': 'Robô Personalizável (v3)',
+            'arquivo': 'robo_pilloto_v3.py',
+            'descricao': 'Versão que usa os prompts personalizáveis da interface',
+            'icon': '🎯'
+        },
+        {
+            'nome': 'Robô Simples',
+            'arquivo': 'robo_simples.py', 
+            'descricao': 'Versão simplificada para testes rápidos',
+            'icon': '⚡'
+        },
+        {
+            'nome': 'Robo Piloto (Original)',
+            'arquivo': 'robo_pilloto.py',
+            'descricao': 'Versão alternativa com funcionalidades extras',
+            'icon': '🔧'
+        }
+    ]
+    
+    for robot in robots:
+        with st.container():
+            st.markdown(f'<div class="robot-card">', unsafe_allow_html=True)
+            
+            col_robot1, col_robot2 = st.columns([3, 1])
+            
+            with col_robot1:
+                st.markdown(f"### {robot['icon']} {robot['nome']}")
+                st.markdown(f"*{robot['descricao']}*")
+                st.markdown(f"**Arquivo:** `{robot['arquivo']}`")
+            
+            with col_robot2:
+                if st.button(f"▶️ Executar", key=f"btn_{robot['arquivo']}", use_container_width=True):
+                    if status and all(status.values()):
+                        st.info(f"🔄 Executando {robot['nome']}...")
+                        
+                        # Executar o robô
+                        resultado = executar_comando(f"python {robot['arquivo']}", robot['nome'])
+                        
+                        if resultado['sucesso']:
+                            st.success(f"✅ {robot['nome']} executado com sucesso!")
+                            
+                            # Mostrar output se houver
+                            if resultado['stdout']:
+                                with st.expander("📋 Ver detalhes da execução"):
+                                    st.code(resultado['stdout'], language="text")
+                        else:
+                            st.error(f"❌ Erro ao executar {robot['nome']}")
+                            if resultado['stderr']:
+                                with st.expander("🔍 Ver erro"):
+                                    st.code(resultado['stderr'], language="text")
+                    else:
+                        st.warning("⚠️ Configure todas as credenciais antes de executar!")
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+
+with col2:
+    st.markdown("## 🧪 Testes")
+    
+    # Testes disponíveis
+    testes = [
+        {
+            'nome': 'Teste WordPress',
+            'arquivo': 'teste_conexao_wordpress.py',
+            'descricao': 'Verifica conexão com WordPress'
+        },
+        {
+            'nome': 'Teste Google Sheets',
+            'arquivo': 'teste_sheets.py',
+            'descricao': 'Verifica conexão com planilha'
+        },
+        {
+            'nome': 'Teste OpenAI + WordPress',
+            'arquivo': 'teste_wordpress.py',
+            'descricao': 'Teste completo com IA'
+        }
+    ]
+    
+    for teste in testes:
+        st.markdown(f"### 🔍 {teste['nome']}")
+        st.markdown(f"*{teste['descricao']}*")
+        
+        if st.button(f"🧪 Executar Teste", key=f"test_{teste['arquivo']}", use_container_width=True):
+            with st.spinner(f"Executando {teste['nome']}..."):
+                resultado = executar_comando(f"python {teste['arquivo']}", teste['nome'])
+                
+                if resultado['sucesso']:
+                    st.success("✅ Teste passou!")
+                    with st.expander("📋 Resultado do teste"):
+                        st.code(resultado['stdout'], language="text")
+                else:
+                    st.error("❌ Teste falhou!")
+                    if resultado['stderr']:
+                        with st.expander("🔍 Erro"):
+                            st.code(resultado['stderr'], language="text")
+        
+        st.markdown("---")
+
+# Seção de configuração
+st.markdown("## ⚙️ Configuração")
+
+with st.expander("🔧 Configurar Credenciais"):
+    st.markdown("""
+    ### Como configurar:
+    
+    1. **Edite o arquivo `.env`:**
+    ```bash
+    nano .env
+    ```
+    
+    2. **Configure suas credenciais:**
+    - `WP_URL`: URL do seu site WordPress
+    - `WP_USER`: Usuário do WordPress
+    - `WP_PASSWORD`: Senha ou Application Password
+    - `OPENAI_API_KEY`: Sua chave da OpenAI
+    - `GOOGLE_SHEET_NAME`: Nome da planilha Google
+    
+    3. **Adicione credenciais do Google:**
+    - Baixe o arquivo JSON das credenciais
+    - Renomeie para `credenciais_google.json`
+    - Coloque na pasta do projeto
+    """)
+
+# Footer
+st.markdown("---")
+st.markdown("""
+<div style='text-align: center; color: #666; padding: 2rem;'>
+    <h4>🤖 RoboWordpress v1.0</h4>
+    <p>Automação inteligente para WordPress com OpenAI e Google Sheets</p>
+    <p><small>Desenvolvido para facilitar a criação de conteúdo SEO</small></p>
+</div>
+""", unsafe_allow_html=True)
