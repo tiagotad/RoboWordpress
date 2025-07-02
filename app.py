@@ -68,17 +68,26 @@ st.markdown("---")
 
 
 # Verificar se está rodando no Streamlit Cloud (método robusto)
+
+# Detecção robusta do ambiente Streamlit Cloud
 def detect_streamlit_cloud():
     # 1. Variável de ambiente padrão do Streamlit Cloud
     if os.getenv('STREAMLIT_CLOUD', '').lower() == 'true':
-        return True
+        return 'envvar'
     # 2. st.secrets._secrets_file é None apenas no cloud
     if hasattr(st, 'secrets') and hasattr(st.secrets, '_secrets_file'):
-        if st.secrets._secrets_file is None:
-            return True
-    return False
+        if getattr(st.secrets, '_secrets_file', 'notfound') is None:
+            return 'secretsfile'
+    # 3. Heurística: st.secrets existe e tem WP_URL, mas não existe config.py
+    if hasattr(st, 'secrets') and 'WP_URL' in st.secrets and not os.path.exists('config.py'):
+        return 'heuristic'
+    return ''
 
-is_streamlit_cloud = detect_streamlit_cloud()
+is_streamlit_cloud_mode = detect_streamlit_cloud()
+is_streamlit_cloud = bool(is_streamlit_cloud_mode)
+
+# Mostra no topo qual modo de detecção foi ativado (debug visual)
+st.markdown(f"<div style='color:#888;font-size:0.9rem;'>[DEBUG: Streamlit Cloud Mode: <b>{is_streamlit_cloud_mode or 'local'}</b>]</div>", unsafe_allow_html=True)
 
 if is_streamlit_cloud:
     st.markdown("## 🌐 **RODANDO NO STREAMLIT CLOUD**")
