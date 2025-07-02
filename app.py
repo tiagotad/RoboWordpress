@@ -62,8 +62,19 @@ st.markdown('<h1 class="main-header">🤖 RoboWordpress - Painel de Controle</h1
 # ⚠️ SEÇÃO DE CONFIGURAÇÃO DESTACADA
 st.markdown("---")
 
-# Verificar se está rodando no Streamlit Cloud
-is_streamlit_cloud = os.getenv('HOSTNAME', '').endswith('.streamlit.app') or 'streamlit' in os.getenv('HOSTNAME', '').lower()
+
+# Verificar se está rodando no Streamlit Cloud (método robusto)
+def detect_streamlit_cloud():
+    # 1. Variável de ambiente padrão do Streamlit Cloud
+    if os.getenv('STREAMLIT_CLOUD', '').lower() == 'true':
+        return True
+    # 2. st.secrets._secrets_file é None apenas no cloud
+    if hasattr(st, 'secrets') and hasattr(st.secrets, '_secrets_file'):
+        if st.secrets._secrets_file is None:
+            return True
+    return False
+
+is_streamlit_cloud = detect_streamlit_cloud()
 
 if is_streamlit_cloud:
     st.markdown("## 🌐 **RODANDO NO STREAMLIT CLOUD**")
@@ -128,36 +139,45 @@ st.sidebar.markdown("## 📊 Status do Sistema")
 def verificar_configuracoes():
     """Verifica se todas as configurações estão corretas"""
     try:
-        # Importar config local
-        sys.path.append(os.getcwd())
-        from config import WP_URL, WP_USER, WP_PASSWORD, OPENAI_API_KEY, GOOGLE_SHEET_NAME, GOOGLE_SHEET_ID
-        
+        if is_streamlit_cloud:
+            # Pega variáveis dos secrets do Streamlit Cloud
+            WP_URL = st.secrets.get('WP_URL', '')
+            WP_USER = st.secrets.get('WP_USER', '')
+            WP_PASSWORD = st.secrets.get('WP_PASSWORD', '')
+            OPENAI_API_KEY = st.secrets.get('OPENAI_API_KEY', '')
+            GOOGLE_SHEET_NAME = st.secrets.get('GOOGLE_SHEET_NAME', st.secrets.get('GOOGLE_SHEET', ''))
+            GOOGLE_SHEET_ID = st.secrets.get('GOOGLE_SHEET_ID', '')
+        else:
+            # Importar config local
+            sys.path.append(os.getcwd())
+            from config import WP_URL, WP_USER, WP_PASSWORD, OPENAI_API_KEY, GOOGLE_SHEET_NAME, GOOGLE_SHEET_ID
+
         # Verificações mais flexíveis
-        wp_ok = WP_URL not in ['https://exemplo.com', 'https://seu-site.com'] and WP_PASSWORD not in ['senha', 'sua_senha']
+        wp_ok = WP_URL not in ['https://exemplo.com', 'https://seu-site.com', '', None] and WP_PASSWORD not in ['senha', 'sua_senha', '', None]
         openai_ok = OPENAI_API_KEY and len(OPENAI_API_KEY) > 20 and OPENAI_API_KEY.startswith('sk-')
-        sheets_ok = (GOOGLE_SHEET_NAME not in ['nome_da_sua_planilha', 'TopicosBlog']) or bool(GOOGLE_SHEET_ID)
-        
+        sheets_ok = (GOOGLE_SHEET_NAME not in ['nome_da_sua_planilha', 'TopicosBlog', '', None]) or bool(GOOGLE_SHEET_ID)
+
         # Para credenciais Google: verificar se arquivo existe OU se tem credenciais nos secrets
         credentials_ok = os.path.exists('credenciais_google.json')
         try:
             # Se estiver no Streamlit Cloud, pode ter credenciais nos secrets
-            if hasattr(st, 'secrets') and 'GOOGLE_CREDENTIALS' in st.secrets:
+            if hasattr(st, 'secrets') and ('GOOGLE_CREDENTIALS' in st.secrets or 'GOOGLE_CREDENTIALS_JSON' in st.secrets):
                 credentials_ok = True
-        except:
+        except Exception:
             pass
-        
+
         status = {
             'wordpress': wp_ok,
             'openai': openai_ok,
             'google_sheets': sheets_ok,
             'credentials_file': credentials_ok
         }
-        
+
         return status, {
             'wp_url': WP_URL,
             'wp_user': WP_USER,
             'google_sheet': GOOGLE_SHEET_NAME,
-            'openai_key': f"{OPENAI_API_KEY[:15]}..." if len(OPENAI_API_KEY) > 15 else "Não configurada"
+            'openai_key': f"{OPENAI_API_KEY[:15]}..." if OPENAI_API_KEY and len(OPENAI_API_KEY) > 15 else "Não configurada"
         }
     except Exception as e:
         return None, f"Erro ao carregar configurações: {str(e)}"
@@ -209,6 +229,112 @@ def executar_comando(comando, nome_processo):
             'codigo': -1
         }
     except Exception as e:
+        return {
+            'sucesso': False,
+            'stdout': '',
+            'stderr': f'Erro ao executar: {str(e)}',
+            'codigo': -1
+        }
+
+# Função para executar comando com logs em tempo real
+def executar_comando_com_logs(comando, nome_processo, log_container):
+    """Executa um comando mostrando logs em tempo real"""
+    import subprocess
+    import time
+    from datetime import datetime
+    
+    # Mostrar início da execução
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    log_container.info(f"🚀 [{timestamp}] Iniciando execução do {nome_processo}...")
+    
+    # Barra de progresso
+    progress_bar = log_container.progress(0)
+    progress_text = log_container.empty()
+    
+    try:
+        # Comando completo
+        cmd_completo = f"python {comando}"
+        
+        # Executar processo
+        process = subprocess.Popen(
+            cmd_completo,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            universal_newlines=True
+        )
+        
+        # Placeholder para logs em tempo real
+        log_placeholder = log_container.empty()
+        logs_completos = []
+        linha_count = 0
+        
+        # Ler saída linha por linha
+        while True:
+            output = process.stdout.readline()
+            if output == '' and process.poll() is not None:
+                break
+            if output:
+                timestamp = datetime.now().strftime("%H:%M:%S")
+                linha_log = f"[{timestamp}] {output.strip()}"
+                logs_completos.append(linha_log)
+                linha_count += 1
+                
+                # Atualizar progresso (estimativa baseada no número de linhas)
+                progress = min(linha_count * 2, 90)  # Max 90% durante execução
+                progress_bar.progress(progress)
+                progress_text.text(f"📊 Processando... ({linha_count} linhas processadas)")
+                
+                # Mostrar últimas 10 linhas
+                ultimas_linhas = logs_completos[-10:]
+                log_text = "\n".join(ultimas_linhas)
+                log_placeholder.code(log_text, language="text")
+        
+        # Esperar processo terminar
+        return_code = process.wait()
+        
+        # Finalizar progresso
+        progress_bar.progress(100)
+        
+        # Resultado final
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        if return_code == 0:
+            progress_text.text("✅ Execução concluída com sucesso!")
+            log_container.success(f"✅ [{timestamp}] {nome_processo} executado com sucesso!")
+            return {
+                'sucesso': True,
+                'stdout': '\n'.join(logs_completos),
+                'stderr': '',
+                'codigo': return_code
+            }
+        else:
+            progress_text.text("❌ Execução falhou!")
+            log_container.error(f"❌ [{timestamp}] {nome_processo} falhou com código {return_code}")
+            return {
+                'sucesso': False,
+                'stdout': '\n'.join(logs_completos),
+                'stderr': f'Processo falhou com código {return_code}',
+                'codigo': return_code
+            }
+            
+    except subprocess.TimeoutExpired:
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        progress_bar.progress(0)
+        progress_text.text("⏰ Tempo limite excedido!")
+        log_container.error(f"⏰ [{timestamp}] {nome_processo} excedeu tempo limite!")
+        return {
+            'sucesso': False,
+            'stdout': '',
+            'stderr': 'Processo excedeu tempo limite (5 minutos)',
+            'codigo': -1
+        }
+    except Exception as e:
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        progress_bar.progress(0)
+        progress_text.text(f"💥 Erro na execução!")
+        log_container.error(f"💥 [{timestamp}] Erro ao executar {nome_processo}: {str(e)}")
         return {
             'sucesso': False,
             'stdout': '',
@@ -407,23 +533,16 @@ with col1:
             with col_robot2:
                 if st.button(f"▶️ Executar", key=f"btn_{robot['arquivo']}", use_container_width=True):
                     if status and all(status.values()):
-                        st.info(f"🔄 Executando {robot['nome']}...")
+                        # Container para logs em tempo real
+                        log_container = st.container()
                         
-                        # Executar o robô
-                        resultado = executar_comando(f"python {robot['arquivo']}", robot['nome'])
+                        # Executar o robô com logs em tempo real
+                        resultado = executar_comando_com_logs(robot['arquivo'], robot['nome'], log_container)
                         
-                        if resultado['sucesso']:
-                            st.success(f"✅ {robot['nome']} executado com sucesso!")
-                            
-                            # Mostrar output se houver
-                            if resultado['stdout']:
-                                with st.expander("📋 Ver detalhes da execução"):
-                                    st.code(resultado['stdout'], language="text")
-                        else:
-                            st.error(f"❌ Erro ao executar {robot['nome']}")
-                            if resultado['stderr']:
-                                with st.expander("🔍 Ver erro"):
-                                    st.code(resultado['stderr'], language="text")
+                        # Mostrar output detalhado se houver
+                        if resultado['stdout']:
+                            with st.expander("📋 Ver log completo da execução"):
+                                st.code(resultado['stdout'], language="text")
                     else:
                         st.warning("⚠️ Configure todas as credenciais antes de executar!")
             
@@ -456,18 +575,16 @@ with col2:
         st.markdown(f"*{teste['descricao']}*")
         
         if st.button(f"🧪 Executar Teste", key=f"test_{teste['arquivo']}", use_container_width=True):
-            with st.spinner(f"Executando {teste['nome']}..."):
-                resultado = executar_comando(f"python {teste['arquivo']}", teste['nome'])
-                
-                if resultado['sucesso']:
-                    st.success("✅ Teste passou!")
-                    with st.expander("📋 Resultado do teste"):
-                        st.code(resultado['stdout'], language="text")
-                else:
-                    st.error("❌ Teste falhou!")
-                    if resultado['stderr']:
-                        with st.expander("🔍 Erro"):
-                            st.code(resultado['stderr'], language="text")
+            # Container para logs em tempo real do teste
+            log_container = st.container()
+            
+            # Executar teste com logs em tempo real
+            resultado = executar_comando_com_logs(teste['arquivo'], teste['nome'], log_container)
+            
+            # Mostrar log completo se houver
+            if resultado['stdout']:
+                with st.expander("� Log completo do teste"):
+                    st.code(resultado['stdout'], language="text")
         
         st.markdown("---")
 
