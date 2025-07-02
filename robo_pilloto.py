@@ -23,6 +23,15 @@ from prompt_manager import get_prompt_titulo, get_prompt_artigo, get_system_prom
 
 # Validar configurações ao iniciar
 
+
+# Debug: ver de onde está vindo a chave OPENAI_API_KEY
+try:
+    origem = "st.secrets" if ('st' in globals() and hasattr(st, 'secrets') and 'OPENAI_API_KEY' in st.secrets) else "config.py/.env"
+    print(f"[DEBUG] Origem da OPENAI_API_KEY: {origem}")
+    print(f"[DEBUG] Valor da OPENAI_API_KEY (primeiros 8 chars): {OPENAI_API_KEY[:8]}")
+except Exception as e:
+    print(f"[DEBUG] Erro ao checar origem da OPENAI_API_KEY: {e}")
+
 # Inicializar cliente OpenAI com configurações atualizadas
 client = OpenAI(
     api_key=OPENAI_API_KEY,
@@ -50,7 +59,8 @@ def carregar_topicos_sheets():
         else:
             # Local: usar arquivo físico
             if not os.path.exists(CREDENTIALS_FILE):
-                raise FileNotFoundError(f"Arquivo de credenciais não encontrado: {CREDENTIALS_FILE}")
+                print(f"[AVISO] Arquivo de credenciais não encontrado: {CREDENTIALS_FILE}")
+                return []
             creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=scope)
         gc = gspread.authorize(creds)
         

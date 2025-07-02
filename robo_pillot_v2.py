@@ -31,6 +31,15 @@ def carregar_topicos():
     topicos = sheet.col_values(1)[1:]  # Pega coluna A ignorando cabeçalho
     return topicos
 
+
+# Debug: ver de onde está vindo a chave OPENAI_API_KEY
+try:
+    origem = "st.secrets" if ('st' in globals() and hasattr(st, 'secrets') and 'OPENAI_API_KEY' in st.secrets) else "config.py/.env"
+    print(f"[DEBUG] Origem da OPENAI_API_KEY: {origem}")
+    print(f"[DEBUG] Valor da OPENAI_API_KEY (primeiros 8 chars): {OPENAI_API_KEY[:8]}")
+except Exception as e:
+    print(f"[DEBUG] Erro ao checar origem da OPENAI_API_KEY: {e}")
+
 # 3. Inicializa cliente OpenAI
 client = OpenAI(api_key=OPENAI_API_KEY)
 
