@@ -9,15 +9,21 @@ from requests.auth import HTTPBasicAuth
 import gspread
 from google.oauth2.service_account import Credentials
 
+
 # Importação condicional de configuração (local ou cloud)
 try:
     import streamlit as st
     if hasattr(st, "secrets") and "WP_URL" in st.secrets:
         from config_cloud import *
+        print("[DEBUG] Ambiente: Streamlit Cloud (config_cloud)")
+        print(f"[DEBUG] Chaves em st.secrets: {list(st.secrets.keys())}")
+        print(f"[DEBUG] GOOGLE_CREDENTIALS_JSON está em st.secrets? {'GOOGLE_CREDENTIALS_JSON' in st.secrets}")
     else:
         from config import *
+        print("[DEBUG] Ambiente: Local (config)")
 except ImportError:
     from config import *
+    print("[DEBUG] Ambiente: Local (config) - streamlit não disponível")
 
 from prompt_manager import get_prompt_titulo, get_prompt_artigo, get_system_prompts
 
