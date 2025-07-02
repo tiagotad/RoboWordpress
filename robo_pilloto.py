@@ -15,12 +15,10 @@ try:
     import streamlit as st
     if hasattr(st, "secrets") and "WP_URL" in st.secrets:
         from config_cloud import *
-        print("[DEBUG] Ambiente: Streamlit Cloud (config_cloud)")
-        print(f"[DEBUG] Chaves em st.secrets: {list(st.secrets.keys())}")
-        print(f"[DEBUG] GOOGLE_CREDENTIALS_JSON está em st.secrets? {'GOOGLE_CREDENTIALS_JSON' in st.secrets}")
+        st.info(f"[DEBUG] Ambiente: Streamlit Cloud (config_cloud)\nChaves em st.secrets: {list(st.secrets.keys())}\nGOOGLE_CREDENTIALS_JSON está em st.secrets? {'GOOGLE_CREDENTIALS_JSON' in st.secrets}")
     else:
         from config import *
-        print("[DEBUG] Ambiente: Local (config)")
+        st.info("[DEBUG] Ambiente: Local (config)")
 except ImportError:
     from config import *
     print("[DEBUG] Ambiente: Local (config) - streamlit não disponível")
