@@ -59,6 +59,68 @@ st.markdown("""
 # Título principal
 st.markdown('<h1 class="main-header">🤖 RoboWordpress - Painel de Controle</h1>', unsafe_allow_html=True)
 
+# ⚠️ SEÇÃO DE CONFIGURAÇÃO DESTACADA
+st.markdown("---")
+
+# Verificar se está rodando no Streamlit Cloud
+is_streamlit_cloud = os.getenv('HOSTNAME', '').endswith('.streamlit.app') or 'streamlit' in os.getenv('HOSTNAME', '').lower()
+
+if is_streamlit_cloud:
+    st.markdown("## 🌐 **RODANDO NO STREAMLIT CLOUD**")
+    
+    # Verificar se secrets estão configuradas
+    missing_secrets = []
+    try:
+        required_secrets = ['WP_URL', 'WP_USER', 'WP_PASSWORD', 'OPENAI_API_KEY', 'GOOGLE_SHEET_ID']
+        for secret in required_secrets:
+            if secret not in st.secrets:
+                missing_secrets.append(secret)
+    except:
+        missing_secrets = ['Todas as credenciais']
+    
+    if missing_secrets:
+        st.error("""
+        ❌ **CREDENCIAIS NÃO CONFIGURADAS!**
+        
+        Para usar o RoboWordpress, você precisa configurar as credenciais no Streamlit Cloud.
+        """)
+        
+        with st.expander("🔧 **COMO CONFIGURAR - CLIQUE AQUI**", expanded=True):
+            st.markdown("""
+            ### 📋 **PASSOS PARA CONFIGURAR:**
+            
+            1. **Acesse:** https://share.streamlit.io
+            2. **Encontre seu app** RoboWordpress
+            3. **Clique no menu "⋮"** (três pontos)
+            4. **Selecione "Settings"**
+            5. **Clique na aba "Secrets"**
+            6. **Cole este texto** (substitua pelos seus valores):
+            
+            ```toml
+            WP_URL = "https://seu-site-wordpress.com"
+            WP_USER = "seu_usuario"
+            WP_PASSWORD = "sua_senha"
+            OPENAI_API_KEY = "sk-proj-sua-chave..."
+            GOOGLE_SHEET_ID = "1ABC123DEF456..."
+            GOOGLE_SHEET_NAME = "Nome da Planilha"
+            ```
+            
+            7. **Clique "Save"**
+            8. **Reinicie o app** (botão "Reboot")
+            """)
+            
+            st.info("📋 **Credenciais faltando:** " + ", ".join(missing_secrets))
+            
+        st.warning("⚠️ Configure as credenciais acima para continuar usando o app.")
+        st.stop()
+    else:
+        st.success("✅ **Credenciais configuradas com sucesso!**")
+
+else:
+    st.info("💻 **Rodando localmente** - Configure o arquivo `.env`")
+
+st.markdown("---")
+
 # Sidebar com informações
 st.sidebar.markdown("## 📊 Status do Sistema")
 
