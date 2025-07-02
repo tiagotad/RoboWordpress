@@ -58,7 +58,7 @@ st.markdown("""
 
 
 # Versão do app
-APP_VERSION = "1.0.2 - Streamlit Cloud Patch 2025-07-02"
+APP_VERSION = "1.0.3 - Streamlit Cloud Patch 2025-07-02"
 
 # Título principal com versão
 st.markdown(f'<h1 class="main-header">🤖 RoboWordpress - Painel de Controle <span style="font-size:1.2rem;color:#888;">v{APP_VERSION}</span></h1>', unsafe_allow_html=True)
