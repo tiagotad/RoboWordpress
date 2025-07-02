@@ -1,4 +1,22 @@
 # 1. Importar as bibliotecas necessárias
+
+# Bloco robusto para garantir importação do config.py
+import sys
+import os
+project_root_candidates = [
+    os.path.dirname(os.path.abspath(__file__)),
+    os.getcwd(),
+    '/mount/src/robowordpress'
+]
+for path in project_root_candidates:
+    if path not in sys.path and os.path.exists(os.path.join(path, 'config.py')):
+        sys.path.insert(0, path)
+        break
+else:
+    for path in project_root_candidates:
+        if path not in sys.path:
+            sys.path.insert(0, path)
+
 import requests
 import time
 import os
@@ -6,7 +24,6 @@ from openai import OpenAI
 from requests.auth import HTTPBasicAuth
 import gspread
 from google.oauth2.service_account import Credentials
-
 from config import *
 from prompt_manager import get_prompt_titulo, get_prompt_artigo, get_system_prompts
 

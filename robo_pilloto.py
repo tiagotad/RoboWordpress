@@ -1,16 +1,20 @@
 # 1. Importar as bibliotecas necessárias
 import sys
 import os
-# Garante que a raiz do projeto (onde está config.py) está no sys.path
-possible_roots = [
-    os.getcwd(),
+# Bloco robusto para garantir importação do config.py
+project_root_candidates = [
     os.path.dirname(os.path.abspath(__file__)),
-    os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    os.getcwd(),
+    '/mount/src/robowordpress'
 ]
-for root in possible_roots:
-    if os.path.exists(os.path.join(root, 'config.py')) and root not in sys.path:
-        sys.path.insert(0, root)
+for path in project_root_candidates:
+    if path not in sys.path and os.path.exists(os.path.join(path, 'config.py')):
+        sys.path.insert(0, path)
         break
+else:
+    for path in project_root_candidates:
+        if path not in sys.path:
+            sys.path.insert(0, path)
 import requests
 import time
 import os
