@@ -295,8 +295,8 @@ def executar_comando_com_logs(comando, nome_processo, log_container):
     progress_text = log_container.empty()
     
     try:
-        # Comando completo
-        cmd_completo = f"python {comando}"
+        # Comando completo: usar o mesmo interpretador Python do Streamlit
+        cmd_completo = f"{sys.executable} {comando}"
         
         # Executar processo
         process = subprocess.Popen(
