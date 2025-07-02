@@ -297,8 +297,7 @@ def executar_comando_com_logs(comando, nome_processo, log_container):
     try:
         # Comando completo: usar o mesmo interpretador Python do Streamlit
         cmd_completo = f"{sys.executable} {comando}"
-        
-        # Executar processo
+        # Forçar working directory correto no Streamlit Cloud
         process = subprocess.Popen(
             cmd_completo,
             shell=True,
@@ -306,7 +305,8 @@ def executar_comando_com_logs(comando, nome_processo, log_container):
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
-            universal_newlines=True
+            universal_newlines=True,
+            cwd="/mount/src/robowordpress" if is_streamlit_cloud else None
         )
         
         # Placeholder para logs em tempo real
