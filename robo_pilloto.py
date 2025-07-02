@@ -1,7 +1,12 @@
 # 1. Importar as bibliotecas necessárias
 import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+# Garante que a raiz do projeto está no sys.path
+project_root = os.path.dirname(os.path.abspath(__file__))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+if os.path.dirname(project_root) not in sys.path:
+    sys.path.insert(0, os.path.dirname(project_root))
 import requests
 import time
 import os
