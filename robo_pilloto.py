@@ -1,4 +1,7 @@
 # 1. Importar as bibliotecas necessárias
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import requests
 import time
 import os
@@ -92,12 +95,12 @@ for topico_geral in topicos:
 Você é um especialista em criação de conteúdo para entretenimento e estilo de vida. Com base no tópico geral “{topico_geral}”, crie UM título específico e otimizado para SEO em Portugues, voltado para blog.
 
 O título deve:
-	•	Focar em tendências recentes, notícias ou acontecimentos nas áreas de: filmes, séries, livros, viagens, história ou cultura pop
-	•	Basear-se em eventos atuais de fontes confiáveis como IMDb, Netflix, Amazon Prime, Disney+, grandes editoras, sites de viagem ou descobertas históricas
-	•	Ser altamente pesquisável e atrativo para SEO
-	•	Ter como público-alvo entusiastas do entretenimento e o público geral
-	•	Ter entre 50 e 80 caracteres, ideal para SEO
-	•	Incluir palavras-chave que estão em alta nas buscas
+    •	Focar em tendências recentes, notícias ou acontecimentos nas áreas de: filmes, séries, livros, viagens, história ou cultura pop
+    •	Basear-se em eventos atuais de fontes confiáveis como IMDb, Netflix, Amazon Prime, Disney+, grandes editoras, sites de viagem ou descobertas históricas
+    •	Ser altamente pesquisável e atrativo para SEO
+    •	Ter como público-alvo entusiastas do entretenimento e o público geral
+    •	Ter entre 50 e 80 caracteres, ideal para SEO
+    •	Incluir palavras-chave que estão em alta nas buscas
 
 Exemplos de bons títulos:
 - "As séries mais assistidas da Netflix em 2024: Guia completo de ranking"
@@ -125,55 +128,55 @@ Retorne APENAS o título, nada mais.
 Escreva um post de blog completo e otimizado para SEO com 1000 a 1200 palavras, intitulado: "{titulo_especifico}"
 
  Fontes Internacionais:
-	•	Filmes/Séries: IMDb, Rotten Tomatoes, Netflix, Disney+, HBO Max, Amazon Prime
-	•	Livros: Goodreads, Publishers Weekly, New York Times Book Review
-	•	Viagens: Lonely Planet, National Geographic, TripAdvisor, sites oficiais de turismo
-	•	História: National Geographic, History Channel, Smithsonian, descobertas arqueológicas
-	•	Cultura Pop: Entertainment Weekly, Variety, The Hollywood Reporter
+    •	Filmes/Séries: IMDb, Rotten Tomatoes, Netflix, Disney+, HBO Max, Amazon Prime
+    •	Livros: Goodreads, Publishers Weekly, New York Times Book Review
+    •	Viagens: Lonely Planet, National Geographic, TripAdvisor, sites oficiais de turismo
+    •	História: National Geographic, History Channel, Smithsonian, descobertas arqueológicas
+    •	Cultura Pop: Entertainment Weekly, Variety, The Hollywood Reporter
 
  Fontes Brasileiras:
-	•	Filmes/Séries: AdoroCinema, Omelete, Canaltech, TecMundo, Rolling Stone Brasil
-	•	Livros: PublishNews, Revista Quatro Cinco Um, Estadão, Folha Ilustrada
-	•	Viagens: Melhores Destinos, Viaje na Viagem, UOL Viagem, Ministério do Turismo
-	•	História/Cultura: Aventuras na História, Revista Superinteressante, Brasil Escola, Globo História
+    •	Filmes/Séries: AdoroCinema, Omelete, Canaltech, TecMundo, Rolling Stone Brasil
+    •	Livros: PublishNews, Revista Quatro Cinco Um, Estadão, Folha Ilustrada
+    •	Viagens: Melhores Destinos, Viaje na Viagem, UOL Viagem, Ministério do Turismo
+    •	História/Cultura: Aventuras na História, Revista Superinteressante, Brasil Escola, Globo História
 
 ESTRUTURA DO ARTIGO E REQUISITOS DE SEO:
-	1.	Introdução Atrativa (150–200 palavras):
-	•	Comece com um fato envolvente, estatística ou evento recente
-	•	Inclua a palavra-chave principal naturalmente no primeiro parágrafo
-	•	Deixe claro o que o leitor aprenderá no artigo
-	2.	Conteúdo Principal (700–800 palavras):
-	•	Use subtítulos H2 e H3 com palavras-chave
-	•	Divida o conteúdo em 3 ou 4 seções principais
-	•	Use listas com marcadores e numeradas
-	•	Adicione dados específicos, datas, nomes e estatísticas
-	•	Utilize palavras-chave semânticas naturalmente ao longo do texto
-	3.	Valor Prático:
-	•	Ofereça dicas, recomendações ou guias acionáveis
-	•	Inclua seções como “o que assistir”, “onde visitar” ou “como fazer”
-	•	Crie listas comparativas ou rankings sempre que for relevante
-	4.	Conclusão Envolvente (100–150 palavras):
-	•	Resuma os principais pontos do artigo
-	•	Inclua uma chamada para ação ou uma pergunta para engajamento
-	•	Encerre com uma observação voltada para o futuro
+    1.	Introdução Atrativa (150–200 palavras):
+    •	Comece com um fato envolvente, estatística ou evento recente
+    •	Inclua a palavra-chave principal naturalmente no primeiro parágrafo
+    •	Deixe claro o que o leitor aprenderá no artigo
+    2.	Conteúdo Principal (700–800 palavras):
+    •	Use subtítulos H2 e H3 com palavras-chave
+    •	Divida o conteúdo em 3 ou 4 seções principais
+    •	Use listas com marcadores e numeradas
+    •	Adicione dados específicos, datas, nomes e estatísticas
+    •	Utilize palavras-chave semânticas naturalmente ao longo do texto
+    3.	Valor Prático:
+    •	Ofereça dicas, recomendações ou guias acionáveis
+    •	Inclua seções como “o que assistir”, “onde visitar” ou “como fazer”
+    •	Crie listas comparativas ou rankings sempre que for relevante
+    4.	Conclusão Envolvente (100–150 palavras):
+    •	Resuma os principais pontos do artigo
+    •	Inclua uma chamada para ação ou uma pergunta para engajamento
+    •	Encerre com uma observação voltada para o futuro
 
 ⸻
 
 OTIMIZAÇÃO SEO:
-	•	Densidade da palavra-chave: 1–2%
-	•	Inclua palavras-chave relacionadas e sinônimos
-	•	Use linguagem compatível com meta descriptions
-	•	Crie conteúdo que responda a perguntas comuns de busca
-	•	Inclua números e superlativos nos subtítulos
+    •	Densidade da palavra-chave: 1–2%
+    •	Inclua palavras-chave relacionadas e sinônimos
+    •	Use linguagem compatível com meta descriptions
+    •	Crie conteúdo que responda a perguntas comuns de busca
+    •	Inclua números e superlativos nos subtítulos
 
 ⸻
 
 TOM E ESTILO:
-	•	Conversacional e informativo
-	•	Entusiástico sobre o tema
-	•	Acessível para o público geral
-	•	Inclua personalidade e opiniões
-	•	Use elementos de storytelling (narrativa)
+    •	Conversacional e informativo
+    •	Entusiástico sobre o tema
+    •	Acessível para o público geral
+    •	Inclua personalidade e opiniões
+    •	Use elementos de storytelling (narrativa)
 Foco do topico: {topico_geral}
 
 Torne o conteúdo envolvente, informativo e altamente compartilhável, mantendo as melhores práticas de SEO."""
