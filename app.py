@@ -56,8 +56,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Título principal
-st.markdown('<h1 class="main-header">🤖 RoboWordpress - Painel de Controle</h1>', unsafe_allow_html=True)
+
+# Versão do app
+APP_VERSION = "1.0.2 - Streamlit Cloud Patch 2025-07-02"
+
+# Título principal com versão
+st.markdown(f'<h1 class="main-header">🤖 RoboWordpress - Painel de Controle <span style="font-size:1.2rem;color:#888;">v{APP_VERSION}</span></h1>', unsafe_allow_html=True)
 
 # ⚠️ SEÇÃO DE CONFIGURAÇÃO DESTACADA
 st.markdown("---")
@@ -82,31 +86,31 @@ if is_streamlit_cloud:
     # Verificar se secrets estão configuradas
     missing_secrets = []
     try:
-        required_secrets = ['WP_URL', 'WP_USER', 'WP_PASSWORD', 'OPENAI_API_KEY', 'GOOGLE_SHEET_ID']
+        required_secrets = ['WP_URL', 'WP_USER', 'WP_PASSWORD', 'OPENAI_API_KEY', 'GOOGLE_SHEET_ID', 'GOOGLE_SHEET_NAME']
         for secret in required_secrets:
-            if secret not in st.secrets:
+            if secret not in st.secrets or not st.secrets.get(secret):
                 missing_secrets.append(secret)
-    except:
+    except Exception:
         missing_secrets = ['Todas as credenciais']
-    
+
     if missing_secrets:
         st.error("""
         ❌ **CREDENCIAIS NÃO CONFIGURADAS!**
-        
+
         Para usar o RoboWordpress, você precisa configurar as credenciais no Streamlit Cloud.
         """)
-        
+
         with st.expander("🔧 **COMO CONFIGURAR - CLIQUE AQUI**", expanded=True):
             st.markdown("""
             ### 📋 **PASSOS PARA CONFIGURAR:**
-            
+
             1. **Acesse:** https://share.streamlit.io
             2. **Encontre seu app** RoboWordpress
             3. **Clique no menu "⋮"** (três pontos)
             4. **Selecione "Settings"**
             5. **Clique na aba "Secrets"**
             6. **Cole este texto** (substitua pelos seus valores):
-            
+
             ```toml
             WP_URL = "https://seu-site-wordpress.com"
             WP_USER = "seu_usuario"
@@ -115,13 +119,13 @@ if is_streamlit_cloud:
             GOOGLE_SHEET_ID = "1ABC123DEF456..."
             GOOGLE_SHEET_NAME = "Nome da Planilha"
             ```
-            
+
             7. **Clique "Save"**
             8. **Reinicie o app** (botão "Reboot")
             """)
-            
+
             st.info("📋 **Credenciais faltando:** " + ", ".join(missing_secrets))
-            
+
         st.warning("⚠️ Configure as credenciais acima para continuar usando o app.")
         st.stop()
     else:
@@ -147,24 +151,26 @@ def verificar_configuracoes():
             OPENAI_API_KEY = st.secrets.get('OPENAI_API_KEY', '')
             GOOGLE_SHEET_NAME = st.secrets.get('GOOGLE_SHEET_NAME', st.secrets.get('GOOGLE_SHEET', ''))
             GOOGLE_SHEET_ID = st.secrets.get('GOOGLE_SHEET_ID', '')
+
+            # Para credenciais Google: considerar válido se ambos presentes
+            credentials_ok = bool(GOOGLE_SHEET_ID and GOOGLE_SHEET_NAME)
         else:
             # Importar config local
             sys.path.append(os.getcwd())
             from config import WP_URL, WP_USER, WP_PASSWORD, OPENAI_API_KEY, GOOGLE_SHEET_NAME, GOOGLE_SHEET_ID
 
+            # Para credenciais Google: verificar se arquivo existe OU se tem credenciais nos secrets
+            credentials_ok = os.path.exists('credenciais_google.json')
+            try:
+                if hasattr(st, 'secrets') and ('GOOGLE_CREDENTIALS' in st.secrets or 'GOOGLE_CREDENTIALS_JSON' in st.secrets):
+                    credentials_ok = True
+            except Exception:
+                pass
+
         # Verificações mais flexíveis
         wp_ok = WP_URL not in ['https://exemplo.com', 'https://seu-site.com', '', None] and WP_PASSWORD not in ['senha', 'sua_senha', '', None]
         openai_ok = OPENAI_API_KEY and len(OPENAI_API_KEY) > 20 and OPENAI_API_KEY.startswith('sk-')
-        sheets_ok = (GOOGLE_SHEET_NAME not in ['nome_da_sua_planilha', 'TopicosBlog', '', None]) or bool(GOOGLE_SHEET_ID)
-
-        # Para credenciais Google: verificar se arquivo existe OU se tem credenciais nos secrets
-        credentials_ok = os.path.exists('credenciais_google.json')
-        try:
-            # Se estiver no Streamlit Cloud, pode ter credenciais nos secrets
-            if hasattr(st, 'secrets') and ('GOOGLE_CREDENTIALS' in st.secrets or 'GOOGLE_CREDENTIALS_JSON' in st.secrets):
-                credentials_ok = True
-        except Exception:
-            pass
+        sheets_ok = (GOOGLE_SHEET_NAME not in ['nome_da_sua_planilha', 'TopicosBlog', '', None]) and bool(GOOGLE_SHEET_ID)
 
         status = {
             'wordpress': wp_ok,
@@ -615,9 +621,9 @@ with st.expander("🔧 Configurar Credenciais"):
 
 # Footer
 st.markdown("---")
-st.markdown("""
+st.markdown(f"""
 <div style='text-align: center; color: #666; padding: 2rem;'>
-    <h4>🤖 RoboWordpress v1.0</h4>
+    <h4>🤖 RoboWordpress <span style='color:#1f77b4;'>v{APP_VERSION}</span></h4>
     <p>Automação inteligente para WordPress com OpenAI e Google Sheets</p>
     <p><small>Desenvolvido para facilitar a criação de conteúdo SEO</small></p>
 </div>
