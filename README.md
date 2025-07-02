@@ -2,6 +2,12 @@
 
 Um robô automatizado para criação de conteúdo SEO no WordPress usando OpenAI e Google Sheets.
 
+## 🌐 ACESSO WEB DIRETO
+
+**🚀 Interface já disponível online:** [https://robowordpress.streamlit.app](https://robowordpress.streamlit.app)
+
+*Acesse a interface web diretamente sem instalação local!*
+
 ## 📋 Descrição
 
 Este projeto é um sistema automatizado que:
@@ -15,6 +21,7 @@ Este projeto é um sistema automatizado que:
 
 - ✅ **Interface Web Streamlit** - Painel de controle amigável com editor visual
 - ✅ **Editor de Prompts Personalizáveis** - Controle total sobre como a IA gera conteúdo
+- ✅ **Deploy na Web** - Acesso 24/7 via Streamlit Cloud
 - ✅ Integração com Google Sheets para gerenciar tópicos
 - ✅ Geração automática de conteúdo usando OpenAI GPT
 - ✅ Publicação automática no WordPress
