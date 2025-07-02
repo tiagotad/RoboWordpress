@@ -135,7 +135,7 @@ def verificar_configuracoes():
         # Verificações mais flexíveis
         wp_ok = WP_URL not in ['https://exemplo.com', 'https://seu-site.com'] and WP_PASSWORD not in ['senha', 'sua_senha']
         openai_ok = OPENAI_API_KEY and len(OPENAI_API_KEY) > 20 and OPENAI_API_KEY.startswith('sk-')
-        sheets_ok = GOOGLE_SHEET_NAME not in ['nome_da_sua_planilha', 'TopicosBlog'] or GOOGLE_SHEET_ID
+        sheets_ok = (GOOGLE_SHEET_NAME not in ['nome_da_sua_planilha', 'TopicosBlog']) or bool(GOOGLE_SHEET_ID)
         
         # Para credenciais Google: verificar se arquivo existe OU se tem credenciais nos secrets
         credentials_ok = os.path.exists('credenciais_google.json')
