@@ -1,12 +1,16 @@
 # 1. Importar as bibliotecas necessárias
 import sys
 import os
-# Garante que a raiz do projeto está no sys.path
-project_root = os.path.dirname(os.path.abspath(__file__))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-if os.path.dirname(project_root) not in sys.path:
-    sys.path.insert(0, os.path.dirname(project_root))
+# Garante que a raiz do projeto (onde está config.py) está no sys.path
+possible_roots = [
+    os.getcwd(),
+    os.path.dirname(os.path.abspath(__file__)),
+    os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+]
+for root in possible_roots:
+    if os.path.exists(os.path.join(root, 'config.py')) and root not in sys.path:
+        sys.path.insert(0, root)
+        break
 import requests
 import time
 import os
