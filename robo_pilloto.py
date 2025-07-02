@@ -1,7 +1,7 @@
 # 1. Importar as bibliotecas necessárias
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 import requests
 import time
 import os
