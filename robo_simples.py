@@ -2,28 +2,22 @@
 # Robô Piloto - Versão Simplificada (sem Google Sheets)
 
 
-# Bloco robusto para garantir importação do config.py
 import sys
 import os
-project_root_candidates = [
-    os.path.dirname(os.path.abspath(__file__)),
-    os.getcwd(),
-    '/mount/src/robowordpress'
-]
-for path in project_root_candidates:
-    if path not in sys.path and os.path.exists(os.path.join(path, 'config.py')):
-        sys.path.insert(0, path)
-        break
-else:
-    for path in project_root_candidates:
-        if path not in sys.path:
-            sys.path.insert(0, path)
-
 import requests
 import time
 from openai import OpenAI
 from requests.auth import HTTPBasicAuth
-from config import *
+
+# Importação condicional de configuração (local ou cloud)
+try:
+    import streamlit as st
+    if hasattr(st, "secrets") and "WP_URL" in st.secrets:
+        from config_cloud import *
+    else:
+        from config import *
+except ImportError:
+    from config import *
 
 # Validar configurações ao iniciar
 if not validar_configuracoes():

@@ -294,6 +294,13 @@ def executar_comando_com_logs(comando, nome_processo, log_container):
     progress_bar = log_container.progress(0)
     progress_text = log_container.empty()
     
+    # DEBUG: Listar arquivos do diretório cloud antes de rodar subprocesso
+    if is_streamlit_cloud:
+        try:
+            files = os.listdir('/mount/src/robowordpress')
+            st.info(f"[DEBUG] Arquivos em /mount/src/robowordpress: {files}")
+        except Exception as e:
+            st.warning(f"[DEBUG] Não foi possível listar arquivos do diretório cloud: {e}")
     try:
         # Comando completo: usar o mesmo interpretador Python do Streamlit
         cmd_completo = f"{sys.executable} {comando}"

@@ -6,7 +6,15 @@ import time
 from openai import OpenAI
 from requests.auth import HTTPBasicAuth
 
-from config import *
+# Importação condicional de configuração (local ou cloud)
+try:
+    import streamlit as st
+    if hasattr(st, "secrets") and "WP_URL" in st.secrets:
+        from config_cloud import *
+    else:
+        from config import *
+except ImportError:
+    from config import *
 
 # Validar configurações ao iniciar
 if not validar_configuracoes():
