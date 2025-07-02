@@ -42,11 +42,16 @@ def carregar_topicos_sheets():
             'https://www.googleapis.com/auth/drive.readonly'
         ]
         
-        # Verificar se o arquivo de credenciais existe
-        if not os.path.exists(CREDENTIALS_FILE):
-            raise FileNotFoundError(f"Arquivo de credenciais não encontrado: {CREDENTIALS_FILE}")
-        
-        creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=scope)
+        import json
+        # Cloud: usar JSON das credenciais do secrets
+        if 'st' in globals() and hasattr(st, 'secrets') and 'GOOGLE_CREDENTIALS_JSON' in st.secrets:
+            creds_dict = json.loads(st.secrets['GOOGLE_CREDENTIALS_JSON'])
+            creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+        else:
+            # Local: usar arquivo físico
+            if not os.path.exists(CREDENTIALS_FILE):
+                raise FileNotFoundError(f"Arquivo de credenciais não encontrado: {CREDENTIALS_FILE}")
+            creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=scope)
         gc = gspread.authorize(creds)
         
         print("Abrindo planilha...")
