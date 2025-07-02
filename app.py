@@ -130,13 +130,27 @@ def verificar_configuracoes():
     try:
         # Importar config local
         sys.path.append(os.getcwd())
-        from config import WP_URL, WP_USER, WP_PASSWORD, OPENAI_API_KEY, GOOGLE_SHEET_NAME
+        from config import WP_URL, WP_USER, WP_PASSWORD, OPENAI_API_KEY, GOOGLE_SHEET_NAME, GOOGLE_SHEET_ID
+        
+        # Verificações mais flexíveis
+        wp_ok = WP_URL not in ['https://exemplo.com', 'https://seu-site.com'] and WP_PASSWORD not in ['senha', 'sua_senha']
+        openai_ok = OPENAI_API_KEY and len(OPENAI_API_KEY) > 20 and OPENAI_API_KEY.startswith('sk-')
+        sheets_ok = GOOGLE_SHEET_NAME not in ['nome_da_sua_planilha', 'TopicosBlog'] or GOOGLE_SHEET_ID
+        
+        # Para credenciais Google: verificar se arquivo existe OU se tem credenciais nos secrets
+        credentials_ok = os.path.exists('credenciais_google.json')
+        try:
+            # Se estiver no Streamlit Cloud, pode ter credenciais nos secrets
+            if hasattr(st, 'secrets') and 'GOOGLE_CREDENTIALS' in st.secrets:
+                credentials_ok = True
+        except:
+            pass
         
         status = {
-            'wordpress': WP_URL != 'https://exemplo.com' and WP_PASSWORD != 'senha',
-            'openai': len(OPENAI_API_KEY) > 20,
-            'google_sheets': GOOGLE_SHEET_NAME != 'nome_da_sua_planilha',
-            'credentials_file': os.path.exists('credenciais_google.json')
+            'wordpress': wp_ok,
+            'openai': openai_ok,
+            'google_sheets': sheets_ok,
+            'credentials_file': credentials_ok
         }
         
         return status, {
