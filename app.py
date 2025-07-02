@@ -581,6 +581,12 @@ with col1:
     # Cards dos robôs (somente os que vamos manter)
     robots = [
         {
+            'nome': 'Robô com Imagens IA (v4) ✨ NOVO!',
+            'arquivo': 'robo_pilloto_v4.py',
+            'descricao': 'Gera conteúdo + imagens automáticas com DALL·E 3 e define como imagem em destaque',
+            'icon': '🎨'
+        },
+        {
             'nome': 'Robô Personalizável (v3)',
             'arquivo': 'robo_pilloto_v3.py',
             'descricao': 'Versão que usa os prompts personalizáveis da interface',
