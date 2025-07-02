@@ -19,6 +19,19 @@ try:
 except ImportError:
     from config import *
 
+# Importar configurações de execução
+try:
+    from config_execucao import get_configuracoes_execucao
+    config_execucao = get_configuracoes_execucao()
+    print(f"[INFO] Configurações de execução: {config_execucao}")
+except ImportError:
+    print("[AVISO] Arquivo config_execucao.py não encontrado, usando configurações padrão")
+    config_execucao = {
+        'categoria_wp': 'Others',
+        'status_publicacao': 'draft',
+        'quantidade_textos': 3
+    }
+
 from prompt_manager import get_prompt_titulo, get_prompt_artigo, get_system_prompts
 
 # Validar configurações ao iniciar
@@ -86,6 +99,12 @@ if not topicos:
         "Livros e Literatura"
     ]
 
+# Limitar quantidade de tópicos conforme configuração
+quantidade_maxima = config_execucao.get('quantidade_textos', 3)
+if len(topicos) > quantidade_maxima:
+    topicos = topicos[:quantidade_maxima]
+    print(f"[INFO] Limitando execução a {quantidade_maxima} tópicos conforme configuração")
+
 print("Tópicos que serão processados:")
 for i, t in enumerate(topicos, 1):
     print(f" {i}. {t}")
@@ -129,49 +148,54 @@ for topico_geral in topicos:
 
         conteudo = response_artigo.choices[0].message.content.strip()
 
-        # === BUSCAR ID DA CATEGORIA "Others" ===
+        # === BUSCAR/CRIAR CATEGORIA CONFIGURADA ===
+        categoria_desejada = config_execucao.get('categoria_wp', 'Others')
         try:
             categories_endpoint = f"{WP_URL}/wp-json/wp/v2/categories"
             categories_response = requests.get(categories_endpoint, auth=HTTPBasicAuth(WP_USER, WP_PASSWORD), timeout=10)
             categories_response.raise_for_status()
             
             categories = categories_response.json()
-            others_category_id = None
+            category_id = None
             
-            # Buscar a categoria "Others"
+            # Buscar a categoria configurada
             for category in categories:
-                if category['name'].lower() == 'others':
-                    others_category_id = category['id']
+                if category['name'].lower() == categoria_desejada.lower():
+                    category_id = category['id']
                     break
             
-            # Se não encontrar a categoria "Others", criar uma nova
-            if others_category_id is None:
+            # Se não encontrar a categoria, criar uma nova
+            if category_id is None:
                 create_category_data = {
-                    'name': 'Others',
-                    'slug': 'others'
+                    'name': categoria_desejada,
+                    'slug': categoria_desejada.lower().replace(' ', '-')
                 }
                 create_response = requests.post(categories_endpoint, json=create_category_data, auth=HTTPBasicAuth(WP_USER, WP_PASSWORD), timeout=10)
                 create_response.raise_for_status()
-                others_category_id = create_response.json()['id']
-                print(f"[INFO] Categoria 'Others' criada com ID: {others_category_id}")
+                category_id = create_response.json()['id']
+                print(f"[INFO] Categoria '{categoria_desejada}' criada com ID: {category_id}")
+            else:
+                print(f"[INFO] Usando categoria existente '{categoria_desejada}' com ID: {category_id}")
             
         except Exception as e:
-            print(f"[AVISO] Erro ao buscar/criar categoria 'Others': {e}")
-            others_category_id = 1  # ID padrão (Uncategorized)
+            print(f"[AVISO] Erro ao buscar/criar categoria '{categoria_desejada}': {e}")
+            category_id = 1  # ID padrão (Uncategorized)
 
-        # === PUBLICAR NO WORDPRESS COMO RASCUNHO ===
+        # === PUBLICAR NO WORDPRESS ===
+        status_publicacao = config_execucao.get('status_publicacao', 'draft')
         post_data = {
             'title': titulo_especifico,
             'content': conteudo,
-            'status': 'draft',  # Salva como rascunho para revisão
-            'categories': [others_category_id]  # Adiciona à categoria Others
+            'status': status_publicacao,
+            'categories': [category_id]
         }
 
         endpoint = f"{WP_URL}/wp-json/wp/v2/posts"
         response_wp = requests.post(endpoint, json=post_data, auth=HTTPBasicAuth(WP_USER, WP_PASSWORD), timeout=20)
         response_wp.raise_for_status()
 
-        print(f"[✔] Rascunho salvo com sucesso na categoria 'Others': {titulo_especifico}")
+        status_msg = "publicado" if status_publicacao == "publish" else "salvo como rascunho"
+        print(f"[✔] Post {status_msg} com sucesso na categoria '{categoria_desejada}': {titulo_especifico}")
         print(f"[INFO] Usando prompts personalizados do arquivo prompts.json")
 
     except Exception as e:

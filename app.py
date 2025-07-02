@@ -541,25 +541,50 @@ col1, col2 = st.columns([2, 1])
 with col1:
     st.markdown("## 🚀 Executar Robôs")
     
-    # Cards dos robôs
+    # Configurações para execução
+    st.markdown("### ⚙️ Configurações de Execução")
+    
+    col_config1, col_config2, col_config3 = st.columns(3)
+    
+    with col_config1:
+        categoria_wp = st.selectbox(
+            "📁 Categoria WordPress:",
+            ["Others", "Uncategorized", "News", "Technology", "Entertainment", "Travel", "Health", "Sports"],
+            index=0,
+            help="Escolha a categoria onde os posts serão publicados"
+        )
+    
+    with col_config2:
+        status_publicacao = st.selectbox(
+            "📮 Status de Publicação:",
+            ["draft", "publish"],
+            index=0,
+            help="Escolha se os posts serão salvos como rascunho ou publicados diretamente"
+        )
+    
+    with col_config3:
+        quantidade_textos = st.number_input(
+            "📝 Quantidade de Textos:",
+            min_value=1,
+            max_value=10,
+            value=3,
+            help="Número de textos que serão gerados (baseado nos tópicos da planilha)"
+        )
+    
+    # Salvar configurações na sessão
+    st.session_state['categoria_wp'] = categoria_wp
+    st.session_state['status_publicacao'] = status_publicacao
+    st.session_state['quantidade_textos'] = quantidade_textos
+    
+    st.markdown("---")
+    
+    # Cards dos robôs (somente os que vamos manter)
     robots = [
-        {
-            'nome': 'Robô Principal (v2)',
-            'arquivo': 'robo_pillot_v2.py',
-            'descricao': 'Versão principal com todas as funcionalidades',
-            'icon': '🤖'
-        },
         {
             'nome': 'Robô Personalizável (v3)',
             'arquivo': 'robo_pilloto_v3.py',
             'descricao': 'Versão que usa os prompts personalizáveis da interface',
             'icon': '🎯'
-        },
-        {
-            'nome': 'Robô Simples',
-            'arquivo': 'robo_simples.py', 
-            'descricao': 'Versão simplificada para testes rápidos',
-            'icon': '⚡'
         },
         {
             'nome': 'Robo Piloto (Original)',
@@ -583,8 +608,39 @@ with col1:
             with col_robot2:
                 if st.button(f"▶️ Executar", key=f"btn_{robot['arquivo']}", use_container_width=True):
                     if status and all(status.values()):
+                        # Salvar configurações antes de executar
+                        try:
+                            with open('config_execucao.py', 'w') as f:
+                                f.write(f"""# Configurações de execução vindas do app.py
+# Este arquivo é gerado automaticamente pelo app.py
+
+# Configurações atuais
+CATEGORIA_WP = "{categoria_wp}"
+STATUS_PUBLICACAO = "{status_publicacao}"  # "draft" ou "publish"
+QUANTIDADE_TEXTOS = {quantidade_textos}
+
+def get_configuracoes_execucao():
+    \"\"\"Retorna as configurações de execução\"\"\"
+    return {{
+        'categoria_wp': CATEGORIA_WP,
+        'status_publicacao': STATUS_PUBLICACAO,
+        'quantidade_textos': QUANTIDADE_TEXTOS
+    }}
+
+def set_configuracoes_execucao(categoria_wp="Others", status_publicacao="draft", quantidade_textos=3):
+    \"\"\"Define as configurações de execução\"\"\"
+    global CATEGORIA_WP, STATUS_PUBLICACAO, QUANTIDADE_TEXTOS
+    CATEGORIA_WP = categoria_wp
+    STATUS_PUBLICACAO = status_publicacao
+    QUANTIDADE_TEXTOS = quantidade_textos
+""")
+                        except Exception as e:
+                            st.error(f"Erro ao salvar configurações: {e}")
+                        
                         # Container para logs em tempo real
                         log_container = st.container()
+                        
+                        st.info(f"🎯 Executando com: Categoria={categoria_wp}, Status={status_publicacao}, Quantidade={quantidade_textos}")
                         
                         # Executar o robô com logs em tempo real
                         resultado = executar_comando_com_logs(robot['arquivo'], robot['nome'], log_container)
