@@ -179,7 +179,7 @@ def verificar_configuracoes():
         # Verificações mais flexíveis
         wp_ok = WP_URL not in ['https://exemplo.com', 'https://seu-site.com', '', None] and WP_PASSWORD not in ['senha', 'sua_senha', '', None]
         openai_ok = OPENAI_API_KEY and len(OPENAI_API_KEY) > 20 and OPENAI_API_KEY.startswith('sk-')
-        sheets_ok = (GOOGLE_SHEET_NAME not in ['nome_da_sua_planilha', 'TopicosBlog', '', None]) and bool(GOOGLE_SHEET_ID)
+        sheets_ok = bool(GOOGLE_SHEET_NAME) and bool(GOOGLE_SHEET_ID)
 
         status = {
             'wordpress': wp_ok,
