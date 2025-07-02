@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import time
@@ -8,6 +9,33 @@ import subprocess
 import threading
 from io import StringIO
 import json
+
+# DEBUG: Listar pacotes instalados no ambiente cloud
+def show_installed_packages():
+    try:
+        import pkg_resources
+        installed = sorted([d.project_name for d in pkg_resources.working_set])
+        st.markdown(f"<div style='color:#888;font-size:0.9rem;'>[DEBUG: Pacotes instalados: <b>{', '.join(installed)}</b>]</div>", unsafe_allow_html=True)
+    except Exception as e:
+        st.markdown(f"<div style='color:#c00;font-size:0.9rem;'>[DEBUG: Erro ao listar pacotes: {e}]</div>", unsafe_allow_html=True)
+
+# Detectar ambiente cloud antes de tudo
+def detect_streamlit_cloud():
+    if os.getenv('STREAMLIT_CLOUD', '').lower() == 'true':
+        return 'envvar'
+    if hasattr(st, 'secrets') and hasattr(st.secrets, '_secrets_file'):
+        if getattr(st.secrets, '_secrets_file', 'notfound') is None:
+            return 'secretsfile'
+    if hasattr(st, 'secrets') and 'WP_URL' in st.secrets and not os.path.exists('config.py'):
+        return 'heuristic'
+    return ''
+
+is_streamlit_cloud_mode = detect_streamlit_cloud()
+is_streamlit_cloud = bool(is_streamlit_cloud_mode)
+
+# Mostrar pacotes instalados no topo se rodando no cloud
+if is_streamlit_cloud:
+    show_installed_packages()
 
 # Configurar página
 st.set_page_config(
