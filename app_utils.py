@@ -23,40 +23,66 @@ def buscar_autores_wordpress(wp_url, wp_user, wp_password):
         print(f"[DEBUG] Buscando autores em: {api_url}")
         print(f"[DEBUG] Usuário: {wp_user}")
         
-        # Fazer requisição com autenticação
-        response = requests.get(
-            api_url,
-            auth=HTTPBasicAuth(wp_user, wp_password),
-            timeout=15,  # Aumentar timeout
-            params={'per_page': 100}  # Buscar até 100 usuários
-        )
+        # Tentar diferentes parâmetros para maximizar chances de sucesso
+        params_list = [
+            {'per_page': 100, 'context': 'view'},  # Parâmetros padrão
+            {'per_page': 100},  # Sem context
+            {'per_page': 50, 'context': 'view'},   # Menos usuários
+            {'per_page': 20},   # Ainda menos
+            {}  # Parâmetros mínimos
+        ]
         
-        print(f"[DEBUG] Status da resposta: {response.status_code}")
+        for i, params in enumerate(params_list):
+            print(f"[DEBUG] Tentativa {i+1} com parâmetros: {params}")
+            
+            # Fazer requisição com autenticação
+            response = requests.get(
+                api_url,
+                auth=HTTPBasicAuth(wp_user, wp_password),
+                timeout=15,
+                params=params
+            )
+            
+            print(f"[DEBUG] Status da resposta (tentativa {i+1}): {response.status_code}")
+            
+            if response.status_code == 200:
+                usuarios = response.json()
+                print(f"[DEBUG] Encontrados {len(usuarios)} usuários na tentativa {i+1}")
+                
+                # Retornar lista de (id, nome) dos autores
+                autores = []
+                for user in usuarios:
+                    user_id = user.get('id')
+                    user_name = user.get('name', 'Nome não disponível')
+                    user_slug = user.get('slug', '')
+                    if user_id:
+                        # Mostrar nome e slug para melhor identificação
+                        display_name = f"{user_name}" + (f" ({user_slug})" if user_slug and user_slug != user_name.lower().replace(' ', '') else "")
+                        autores.append((user_id, display_name))
+                        print(f"[DEBUG] Autor: {user_id} - {display_name}")
+                
+                return autores
+                
+            elif response.status_code == 401:
+                print(f"[ERRO] Não autorizado (401) na tentativa {i+1}")
+                if i == len(params_list) - 1:  # Última tentativa
+                    print(f"[INFO] Todas as tentativas falharam com 401 - usuário pode não ter permissão")
+                continue
+                
+            elif response.status_code == 403:
+                print(f"[ERRO] Acesso negado (403) na tentativa {i+1}")
+                if i == len(params_list) - 1:  # Última tentativa
+                    print(f"[INFO] Todas as tentativas falharam com 403 - permissões insuficientes")
+                continue
+                
+            else:
+                print(f"[ERRO] Falha na tentativa {i+1}: {response.status_code}")
+                print(f"[ERRO] Resposta: {response.text[:200]}")
+                if i == len(params_list) - 1:  # Última tentativa
+                    print(f"[INFO] Todas as tentativas falharam")
         
-        if response.status_code == 200:
-            usuarios = response.json()
-            print(f"[DEBUG] Encontrados {len(usuarios)} usuários")
-            
-            # Retornar lista de (id, nome) dos autores
-            autores = []
-            for user in usuarios:
-                user_id = user.get('id')
-                user_name = user.get('name', 'Nome não disponível')
-                if user_id:
-                    autores.append((user_id, user_name))
-                    print(f"[DEBUG] Autor: {user_id} - {user_name}")
-            
-            return autores
-        elif response.status_code == 401:
-            print(f"[ERRO] Não autorizado (401) - verifique credenciais")
-            return []
-        elif response.status_code == 403:
-            print(f"[ERRO] Acesso negado (403) - usuário pode não ter permissão para listar usuários")
-            return []
-        else:
-            print(f"[ERRO] Falha ao buscar autores: {response.status_code}")
-            print(f"[ERRO] Resposta: {response.text[:200]}")
-            return []
+        # Se chegou aqui, todas as tentativas falharam
+        return []
             
     except requests.exceptions.Timeout:
         print(f"[ERRO] Timeout ao conectar com WordPress")

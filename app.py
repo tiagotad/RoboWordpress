@@ -817,15 +817,18 @@ with col1:
                 # Debug: mostrar credenciais sendo usadas (sem a senha)
                 st.info(f"🔍 Conectando em: {wp_url} como {wp_user}")
                 
-                # Buscar autores
+                # Buscar autores (tentar múltiplas abordagens)
                 st.session_state.wp_autores = buscar_autores_wordpress(wp_url, wp_user, wp_password)
                 
-                # Se não conseguiu buscar lista de autores, tentar buscar apenas o usuário atual
+                # Se não conseguiu buscar lista de autores, tentar buscar apenas o usuário atual como último recurso
                 if not st.session_state.wp_autores:
+                    st.warning("⚠️ Não foi possível carregar lista completa de autores")
+                    st.info("🔄 Tentando buscar pelo menos o usuário atual...")
                     usuario_atual = buscar_usuario_atual(wp_url, wp_user, wp_password)
                     if usuario_atual:
                         st.session_state.wp_autores = [usuario_atual]
-                        st.info(f"✅ Usando usuário atual como autor: {usuario_atual[1]} (ID: {usuario_atual[0]})")
+                        st.info(f"✅ Carregado usuário atual: {usuario_atual[1]} (ID: {usuario_atual[0]})")
+                        st.info("💡 **Nota:** Para ver todos os autores, o usuário precisa ter permissões de administrador")
                 
                 # Buscar categorias
                 st.session_state.wp_categorias = buscar_categorias_wordpress(wp_url, wp_user, wp_password)
@@ -836,18 +839,23 @@ with col1:
                         # Apenas um autor (usuário atual)
                         autor_id, autor_nome = st.session_state.wp_autores[0]
                         st.success(f"✅ Autor identificado: {autor_nome} (ID: {autor_id})")
-                        st.info("💡 Usando usuário atual como autor (permissão limitada para listar outros usuários)")
+                        st.warning("⚠️ **Permissões limitadas:** Seu usuário só pode ver a si mesmo")
+                        st.info("💡 **Solução:** O ID 210 será adicionado automaticamente como opção padrão")
                     else:
                         # Múltiplos autores carregados
                         st.success(f"✅ Carregados {len(st.session_state.wp_autores)} autores do WordPress")
                         autores_nomes = [nome for id, nome in st.session_state.wp_autores]
                         st.info(f"👥 Autores encontrados: {', '.join(autores_nomes)}")
+                        
+                        # Verificar se ID 210 está na lista
+                        if 210 in [id for id, nome in st.session_state.wp_autores]:
+                            st.success("🎯 **Autor padrão (ID 210) encontrado na lista!**")
+                        else:
+                            st.info("🎯 **Autor padrão (ID 210) será adicionado à lista**")
                 else:
                     st.warning("⚠️ Não foi possível carregar autores do WordPress")
-                    st.info("💡 **Possíveis causas:**")
-                    st.info("• Usuário não tem permissão para listar usuários")
-                    st.info("• Use o ID do autor diretamente no campo abaixo")
-                    st.info("• Para encontrar seu ID: WordPress Admin → Usuários → clique no seu usuário → veja a URL")
+                    st.info("🎯 **Não se preocupe:** O ID 210 será usado como padrão automaticamente")
+                    st.info("💡 **Causa:** Usuário com permissões limitadas (normal para segurança)")
                 
                 if st.session_state.wp_categorias:
                     st.success(f"✅ Carregadas {len(st.session_state.wp_categorias)} categorias do WordPress")
@@ -905,38 +913,69 @@ with col1:
         if st.session_state.wp_autores:
             # Se conseguimos carregar autores, mostrar lista
             autor_options = {f"{nome} (ID: {id})": id for id, nome in st.session_state.wp_autores}
+            
+            # Adicionar manualmente o ID 210 se não estiver na lista
+            if 210 not in [id for id, nome in st.session_state.wp_autores]:
+                autor_options["Autor Padrão (ID: 210)"] = 210
+                st.info("✅ Autor padrão (ID 210) adicionado à lista")
+            
+            # Procurar se o ID 210 existe na lista
+            default_index = 0
+            autor_210_key = None
+            for key, autor_id in autor_options.items():
+                if autor_id == 210:
+                    autor_210_key = key
+                    break
+            
+            # Se encontrou o ID 210, definir como padrão
+            if autor_210_key:
+                options_list = list(autor_options.keys())
+                default_index = options_list.index(autor_210_key)
+            
             autor_selecionado = st.selectbox(
                 "👤 Autor do Post:",
                 options=list(autor_options.keys()),
-                help="Selecione o autor que será atribuído ao post no WordPress"
+                index=default_index,
+                help="Autor que será atribuído ao post no WordPress. Padrão: ID 210"
             )
             author_id = autor_options[autor_selecionado]
+            
+            # Mostrar informação sobre o autor selecionado
+            if author_id == 210:
+                st.success("🎯 **Autor padrão (ID 210) selecionado**")
+            else:
+                st.info(f"👤 Autor selecionado: ID {author_id}")
         else:
-            # Se não conseguimos carregar autores, permitir inserção manual
+            # Se não conseguimos carregar autores, usar ID 210 como padrão
             st.markdown("👤 **Autor do Post:**")
             author_id = st.number_input(
                 "ID do Autor:",
                 min_value=1,
-                value=1,
-                help="Digite o ID do autor no WordPress. Para encontrar: WordPress Admin → Usuários → clique no seu usuário → veja a URL (ex: user_id=5)"
+                value=210,  # ID 210 como padrão
+                help="Digite o ID do autor no WordPress. Padrão: 210"
             )
             
-            with st.expander("🔍 Como encontrar o ID do autor?"):
+            if author_id == 210:
+                st.success("🎯 **Usando autor padrão (ID 210)**")
+            else:
+                st.info(f"👤 Autor personalizado: ID {author_id}")
+            
+            with st.expander("ℹ️ Sobre permissões de usuário"):
                 st.markdown("""
-                **Método 1 - Via WordPress Admin:**
-                1. Acesse WordPress Admin → Usuários
-                2. Clique no nome do usuário desejado
-                3. Na URL, procure por `user_id=X` ou `wp-admin/user-edit.php?user_id=X`
-                4. O número após `user_id=` é o ID do autor
+                **Por que não conseguimos listar todos os autores?**
                 
-                **Método 2 - Via API (se tiver permissão):**
-                1. Acesse: `seu-site.com/wp-json/wp/v2/users`
-                2. Procure seu usuário na lista
-                3. O campo `"id"` é o ID do autor
+                🔐 **Seu usuário atual tem permissões limitadas:**
+                - Pode acessar apenas as próprias informações
+                - Não pode listar outros usuários do WordPress
+                - Isso é uma configuração de segurança normal
                 
-                **IDs comuns:**
-                - `1` = Primeiro usuário (geralmente o admin)
-                - `2` = Segundo usuário cadastrado
+                **✅ Soluções:**
+                1. **Use o ID 210 (padrão)** - já configurado automaticamente
+                2. **Para ver todos os autores:** solicite ao administrador para:
+                   - Promover seu usuário a Editor ou Admin
+                   - Ou criar um Application Password de usuário com mais permissões
+                
+                **🎯 O ID 210 funcionará normalmente** para publicar posts!
                 """)
 
     # Salvar configurações na sessão

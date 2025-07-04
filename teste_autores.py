@@ -31,6 +31,12 @@ def teste_autores():
         print(f"✅ Sucesso! Encontrados {len(autores)} autores:")
         for autor_id, autor_nome in autores:
             print(f"  - ID: {autor_id} | Nome: {autor_nome}")
+            
+        # Verificar se ID 210 está na lista
+        if 210 in [id for id, nome in autores]:
+            print(f"🎯 ID 210 encontrado na lista!")
+        else:
+            print(f"⚠️ ID 210 não encontrado na lista")
     else:
         print("❌ Nenhum autor encontrado!")
         print("🔄 Tentando buscar usuário atual como fallback...")
@@ -38,6 +44,7 @@ def teste_autores():
         usuario_atual = buscar_usuario_atual(wp_url, wp_user, wp_password)
         if usuario_atual:
             print(f"✅ Usuário atual encontrado: ID {usuario_atual[0]} - {usuario_atual[1]}")
+            print(f"💡 Na aplicação, o ID 210 será adicionado automaticamente como opção padrão")
         else:
             print("❌ Não foi possível encontrar nem mesmo o usuário atual!")
     
