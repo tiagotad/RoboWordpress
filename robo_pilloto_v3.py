@@ -189,13 +189,16 @@ for topico_geral in topicos:
             print(f"[AVISO] Erro ao buscar/criar categoria '{categoria_desejada}': {e}")
             category_id = 1  # ID padrão (Uncategorized)
 
-        # === PUBLICAR NO WORDPRESS ===
+
+        # === PUBLICAR NO WORDPRESS COM AUTOR ===
         status_publicacao = config_execucao.get('status_publicacao', 'draft')
+        author_id = config_execucao.get('author_id', 1)
         post_data = {
             'title': titulo_especifico,
             'content': conteudo,
             'status': status_publicacao,
-            'categories': [category_id]
+            'categories': [category_id],
+            'author': author_id
         }
 
         endpoint = f"{WP_URL}/wp-json/wp/v2/posts"
@@ -203,7 +206,7 @@ for topico_geral in topicos:
         response_wp.raise_for_status()
 
         status_msg = "publicado" if status_publicacao == "publish" else "salvo como rascunho"
-        print(f"[✔] Post {status_msg} com sucesso na categoria '{categoria_desejada}': {titulo_especifico}")
+        print(f"[✔] Post {status_msg} com sucesso na categoria '{categoria_desejada}' (autor ID {author_id}): {titulo_especifico}")
         print(f"[INFO] Usando prompts personalizados do arquivo prompts.json")
 
     except Exception as e:

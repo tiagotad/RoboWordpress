@@ -542,8 +542,26 @@ with col1:
     
     st.markdown("---")
     
-    col_config1, col_config2, col_config3 = st.columns(3)
-    
+    from app_utils import buscar_autores_wordpress
+    col_config1, col_config2, col_config3, col_config4 = st.columns(4)
+
+    # Buscar autores do WordPress
+    autores_wp = []
+    if status and status.get('wordpress'):
+        try:
+            if is_streamlit_cloud:
+                wp_url = st.secrets.get('WP_URL', '')
+                wp_user = st.secrets.get('WP_USER', '')
+                wp_password = st.secrets.get('WP_PASSWORD', '')
+            else:
+                from config import WP_URL, WP_USER, WP_PASSWORD
+                wp_url = WP_URL
+                wp_user = WP_USER
+                wp_password = WP_PASSWORD
+            autores_wp = buscar_autores_wordpress(wp_url, wp_user, wp_password)
+        except Exception as e:
+            autores_wp = []
+
     with col_config1:
         categoria_wp = st.selectbox(
             "📁 Categoria WordPress:",
@@ -551,7 +569,7 @@ with col1:
             index=0,
             help="Escolha a categoria onde os posts serão publicados"
         )
-    
+
     with col_config2:
         status_publicacao = st.selectbox(
             "📮 Status de Publicação:",
@@ -559,7 +577,7 @@ with col1:
             index=0,
             help="Escolha se os posts serão salvos como rascunho ou publicados diretamente"
         )
-    
+
     with col_config3:
         quantidade_maxima = min(len(topicos_lista), 10) if topicos_lista else 3
         quantidade_textos = st.number_input(
@@ -569,12 +587,26 @@ with col1:
             value=min(3, quantidade_maxima),
             help=f"Número de textos que serão gerados (máximo: {quantidade_maxima} baseado nos tópicos inseridos)"
         )
-    
+
+    with col_config4:
+        if autores_wp:
+            autor_options = {f"{nome} (ID: {id})": id for id, nome in autores_wp}
+            autor_selecionado = st.selectbox(
+                "👤 Autor do Post:",
+                options=list(autor_options.keys()),
+                help="Selecione o autor que será atribuído ao post no WordPress"
+            )
+            author_id = autor_options[autor_selecionado]
+        else:
+            st.warning("⚠️ Não foi possível carregar autores do WordPress")
+            author_id = st.number_input("ID do Autor:", min_value=1, value=1, help="ID do autor no WordPress")
+
     # Salvar configurações na sessão
     st.session_state['categoria_wp'] = categoria_wp
     st.session_state['status_publicacao'] = status_publicacao
     st.session_state['quantidade_textos'] = quantidade_textos
     st.session_state['topicos_lista'] = topicos_lista[:quantidade_textos]  # Limitar aos selecionados
+    st.session_state['author_id'] = author_id
     
     st.markdown("---")
     
@@ -620,7 +652,6 @@ with col1:
                         try:
                             topicos_para_salvar = topicos_lista[:quantidade_textos]
                             topicos_str = '", "'.join(topicos_para_salvar)
-                            
                             with open('config_execucao.py', 'w') as f:
                                 f.write(f"""# Configurações de execução vindas do app.py
 # Este arquivo é gerado automaticamente pelo app.py
@@ -630,22 +661,25 @@ CATEGORIA_WP = "{categoria_wp}"
 STATUS_PUBLICACAO = "{status_publicacao}"  # "draft" ou "publish"
 QUANTIDADE_TEXTOS = {quantidade_textos}
 TOPICOS_LISTA = ["{topicos_str}"]
+AUTHOR_ID = {author_id}
 
 def get_configuracoes_execucao():
-    \"\"\"Retorna as configurações de execução\"\"\"
+    """Retorna as configurações de execução"""
     return {{
         'categoria_wp': CATEGORIA_WP,
         'status_publicacao': STATUS_PUBLICACAO,
         'quantidade_textos': QUANTIDADE_TEXTOS,
-        'topicos_lista': TOPICOS_LISTA
+        'topicos_lista': TOPICOS_LISTA,
+        'author_id': AUTHOR_ID
     }}
 
-def set_configuracoes_execucao(categoria_wp="Others", status_publicacao="draft", quantidade_textos=3, topicos_lista=None):
-    \"\"\"Define as configurações de execução\"\"\"
-    global CATEGORIA_WP, STATUS_PUBLICACAO, QUANTIDADE_TEXTOS, TOPICOS_LISTA
+def set_configuracoes_execucao(categoria_wp="Others", status_publicacao="draft", quantidade_textos=3, topicos_lista=None, author_id=1):
+    """Define as configurações de execução"""
+    global CATEGORIA_WP, STATUS_PUBLICACAO, QUANTIDADE_TEXTOS, TOPICOS_LISTA, AUTHOR_ID
     CATEGORIA_WP = categoria_wp
     STATUS_PUBLICACAO = status_publicacao
     QUANTIDADE_TEXTOS = quantidade_textos
+    AUTHOR_ID = author_id
     if topicos_lista:
         TOPICOS_LISTA = topicos_lista
 """)

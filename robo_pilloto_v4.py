@@ -356,14 +356,17 @@ for topico_geral in topicos:
             category_id = 1
 
         # === PUBLICAR NO WORDPRESS ===
+
+        # === PUBLICAR NO WORDPRESS COM AUTOR ===
         status_publicacao = config_execucao.get('status_publicacao', 'draft')
+        author_id = config_execucao.get('author_id', 1)
         post_data = {
             'title': titulo_especifico,
             'content': conteudo,
             'status': status_publicacao,
-            'categories': [category_id]
+            'categories': [category_id],
+            'author': author_id
         }
-        
         # Adicionar imagem em destaque se foi gerada
         if media_id:
             post_data['featured_media'] = media_id
@@ -376,7 +379,7 @@ for topico_geral in topicos:
         post_id = post_data_response['id']
 
         status_msg = "publicado" if status_publicacao == "publish" else "salvo como rascunho"
-        print(f"[✔] Post {status_msg} com sucesso na categoria '{categoria_desejada}': {titulo_especifico}")
+        print(f"[✔] Post {status_msg} com sucesso na categoria '{categoria_desejada}' (autor ID {author_id}): {titulo_especifico}")
         
         if media_id:
             print(f"[✔] 🖼️ Imagem em destaque definida com sucesso!")
