@@ -799,7 +799,7 @@ with col1:
     
     # Importar função utilitária com tratamento de erro
     try:
-        from app_utils import buscar_autores_wordpress, buscar_categorias_wordpress
+        from app_utils import buscar_autores_wordpress, buscar_categorias_wordpress, buscar_usuario_atual
     except ImportError as e:
         st.error(f"Erro ao importar app_utils: {e}")
         # Função alternativa simples em caso de erro
@@ -807,29 +807,68 @@ with col1:
             return []
         def buscar_categorias_wordpress(wp_url, wp_user, wp_password):
             return ["Others", "Uncategorized"]
+        def buscar_usuario_atual(wp_url, wp_user, wp_password):
+            return None
     
     # Carregar dados do WordPress automaticamente (usando credenciais da sessão)
     if 'wp_autores' not in st.session_state or 'wp_categorias' not in st.session_state:
         with st.spinner("🔄 Carregando dados do WordPress..."):
             try:
+                # Debug: mostrar credenciais sendo usadas (sem a senha)
+                st.info(f"🔍 Conectando em: {wp_url} como {wp_user}")
+                
                 # Buscar autores
                 st.session_state.wp_autores = buscar_autores_wordpress(wp_url, wp_user, wp_password)
+                
+                # Se não conseguiu buscar lista de autores, tentar buscar apenas o usuário atual
+                if not st.session_state.wp_autores:
+                    usuario_atual = buscar_usuario_atual(wp_url, wp_user, wp_password)
+                    if usuario_atual:
+                        st.session_state.wp_autores = [usuario_atual]
+                        st.info(f"✅ Usando usuário atual como autor: {usuario_atual[1]} (ID: {usuario_atual[0]})")
                 
                 # Buscar categorias
                 st.session_state.wp_categorias = buscar_categorias_wordpress(wp_url, wp_user, wp_password)
                 
+                # Mostrar resultados detalhados
                 if st.session_state.wp_autores:
-                    st.success(f"✅ Carregados {len(st.session_state.wp_autores)} autores do WordPress")
+                    if len(st.session_state.wp_autores) == 1:
+                        # Apenas um autor (usuário atual)
+                        autor_id, autor_nome = st.session_state.wp_autores[0]
+                        st.success(f"✅ Autor identificado: {autor_nome} (ID: {autor_id})")
+                        st.info("💡 Usando usuário atual como autor (permissão limitada para listar outros usuários)")
+                    else:
+                        # Múltiplos autores carregados
+                        st.success(f"✅ Carregados {len(st.session_state.wp_autores)} autores do WordPress")
+                        autores_nomes = [nome for id, nome in st.session_state.wp_autores]
+                        st.info(f"👥 Autores encontrados: {', '.join(autores_nomes)}")
                 else:
-                    st.warning("⚠️ Nenhum autor encontrado - usando configuração padrão")
+                    st.warning("⚠️ Não foi possível carregar autores do WordPress")
+                    st.info("💡 **Possíveis causas:**")
+                    st.info("• Usuário não tem permissão para listar usuários")
+                    st.info("• Use o ID do autor diretamente no campo abaixo")
+                    st.info("• Para encontrar seu ID: WordPress Admin → Usuários → clique no seu usuário → veja a URL")
                 
                 if st.session_state.wp_categorias:
                     st.success(f"✅ Carregadas {len(st.session_state.wp_categorias)} categorias do WordPress")
+                    # Debug: mostrar algumas categorias
+                    st.info(f"📁 Primeiras categorias: {', '.join(st.session_state.wp_categorias[:5])}")
+                else:
+                    st.warning("⚠️ Nenhuma categoria encontrada - usando padrões")
                     
             except Exception as e:
                 st.error(f"❌ Erro ao carregar dados do WordPress: {e}")
                 st.session_state.wp_autores = []
                 st.session_state.wp_categorias = ["Others", "Uncategorized"]
+                
+    # Botão para recarregar dados se necessário
+    if st.button("🔄 Recarregar Dados do WordPress", help="Clique se os autores/categorias não apareceram"):
+        # Limpar cache e recarregar
+        if 'wp_autores' in st.session_state:
+            del st.session_state.wp_autores
+        if 'wp_categorias' in st.session_state:
+            del st.session_state.wp_categorias
+        st.rerun()
     
     # Configurações para execução (agora usando dados carregados automaticamente)
     st.markdown("### ⚙️ Configurações de Execução")
@@ -864,6 +903,7 @@ with col1:
 
     with col_config4:
         if st.session_state.wp_autores:
+            # Se conseguimos carregar autores, mostrar lista
             autor_options = {f"{nome} (ID: {id})": id for id, nome in st.session_state.wp_autores}
             autor_selecionado = st.selectbox(
                 "👤 Autor do Post:",
@@ -872,8 +912,32 @@ with col1:
             )
             author_id = autor_options[autor_selecionado]
         else:
-            st.warning("⚠️ Autores não carregados - usando ID padrão")
-            author_id = st.number_input("ID do Autor:", min_value=1, value=1, help="ID do autor no WordPress")
+            # Se não conseguimos carregar autores, permitir inserção manual
+            st.markdown("👤 **Autor do Post:**")
+            author_id = st.number_input(
+                "ID do Autor:",
+                min_value=1,
+                value=1,
+                help="Digite o ID do autor no WordPress. Para encontrar: WordPress Admin → Usuários → clique no seu usuário → veja a URL (ex: user_id=5)"
+            )
+            
+            with st.expander("🔍 Como encontrar o ID do autor?"):
+                st.markdown("""
+                **Método 1 - Via WordPress Admin:**
+                1. Acesse WordPress Admin → Usuários
+                2. Clique no nome do usuário desejado
+                3. Na URL, procure por `user_id=X` ou `wp-admin/user-edit.php?user_id=X`
+                4. O número após `user_id=` é o ID do autor
+                
+                **Método 2 - Via API (se tiver permissão):**
+                1. Acesse: `seu-site.com/wp-json/wp/v2/users`
+                2. Procure seu usuário na lista
+                3. O campo `"id"` é o ID do autor
+                
+                **IDs comuns:**
+                - `1` = Primeiro usuário (geralmente o admin)
+                - `2` = Segundo usuário cadastrado
+                """)
 
     # Salvar configurações na sessão
     st.session_state['categoria_wp'] = categoria_wp

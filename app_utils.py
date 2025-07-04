@@ -20,22 +20,50 @@ def buscar_autores_wordpress(wp_url, wp_user, wp_password):
         # URL da API para buscar usuários/autores
         api_url = f"{wp_url.rstrip('/')}/wp-json/wp/v2/users"
         
+        print(f"[DEBUG] Buscando autores em: {api_url}")
+        print(f"[DEBUG] Usuário: {wp_user}")
+        
         # Fazer requisição com autenticação
         response = requests.get(
             api_url,
             auth=HTTPBasicAuth(wp_user, wp_password),
-            timeout=10
+            timeout=15,  # Aumentar timeout
+            params={'per_page': 100}  # Buscar até 100 usuários
         )
+        
+        print(f"[DEBUG] Status da resposta: {response.status_code}")
         
         if response.status_code == 200:
             usuarios = response.json()
+            print(f"[DEBUG] Encontrados {len(usuarios)} usuários")
+            
             # Retornar lista de (id, nome) dos autores
-            autores = [(user['id'], user['name']) for user in usuarios]
+            autores = []
+            for user in usuarios:
+                user_id = user.get('id')
+                user_name = user.get('name', 'Nome não disponível')
+                if user_id:
+                    autores.append((user_id, user_name))
+                    print(f"[DEBUG] Autor: {user_id} - {user_name}")
+            
             return autores
+        elif response.status_code == 401:
+            print(f"[ERRO] Não autorizado (401) - verifique credenciais")
+            return []
+        elif response.status_code == 403:
+            print(f"[ERRO] Acesso negado (403) - usuário pode não ter permissão para listar usuários")
+            return []
         else:
             print(f"[ERRO] Falha ao buscar autores: {response.status_code}")
+            print(f"[ERRO] Resposta: {response.text[:200]}")
             return []
             
+    except requests.exceptions.Timeout:
+        print(f"[ERRO] Timeout ao conectar com WordPress")
+        return []
+    except requests.exceptions.ConnectionError:
+        print(f"[ERRO] Erro de conexão com WordPress")
+        return []
     except Exception as e:
         print(f"[ERRO] Erro ao conectar com WordPress: {e}")
         return []
@@ -120,3 +148,44 @@ def buscar_categorias_wordpress(wp_url, wp_user, wp_password):
         print(f"Erro ao conectar com WordPress para buscar categorias: {e}")
         return ["Others", "Uncategorized", "News", "Technology", 
                "Entertainment", "Travel", "Health", "Sports"]
+
+def buscar_usuario_atual(wp_url, wp_user, wp_password):
+    """
+    Busca informações do usuário logado (sempre funciona se as credenciais estão corretas)
+    
+    Args:
+        wp_url (str): URL do site WordPress
+        wp_user (str): Usuário do WordPress
+        wp_password (str): Senha/Application Password do WordPress
+    
+    Returns:
+        tuple: (id, nome) do usuário atual ou None se erro
+    """
+    try:
+        # URL da API para buscar o usuário atual
+        api_url = f"{wp_url.rstrip('/')}/wp-json/wp/v2/users/me"
+        
+        print(f"[DEBUG] Buscando usuário atual em: {api_url}")
+        
+        # Fazer requisição com autenticação
+        response = requests.get(
+            api_url,
+            auth=HTTPBasicAuth(wp_user, wp_password),
+            timeout=10
+        )
+        
+        print(f"[DEBUG] Status da resposta (usuário atual): {response.status_code}")
+        
+        if response.status_code == 200:
+            user_data = response.json()
+            user_id = user_data.get('id')
+            user_name = user_data.get('name', 'Usuário atual')
+            print(f"[DEBUG] Usuário atual: {user_id} - {user_name}")
+            return (user_id, user_name)
+        else:
+            print(f"[ERRO] Falha ao buscar usuário atual: {response.status_code}")
+            return None
+            
+    except Exception as e:
+        print(f"[ERRO] Erro ao buscar usuário atual: {e}")
+        return None
