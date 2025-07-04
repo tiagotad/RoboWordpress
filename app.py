@@ -542,7 +542,15 @@ with col1:
     
     st.markdown("---")
     
-    from app_utils import buscar_autores_wordpress
+    # Importar função utilitária com tratamento de erro
+    try:
+        from app_utils import buscar_autores_wordpress
+    except ImportError as e:
+        st.error(f"Erro ao importar app_utils: {e}")
+        # Função alternativa simples em caso de erro
+        def buscar_autores_wordpress(wp_url, wp_user, wp_password):
+            return []
+    
     col_config1, col_config2, col_config3, col_config4 = st.columns(4)
 
     # Buscar autores do WordPress
