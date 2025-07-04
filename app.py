@@ -651,38 +651,34 @@ with col1:
                         # Salvar configurações antes de executar
                         try:
                             topicos_para_salvar = topicos_lista[:quantidade_textos]
-                            topicos_str = '", "'.join(topicos_para_salvar)
+                            topicos_str = '\", \"'.join(topicos_para_salvar)
+                            config_exec_code = (
+                                "# Configurações de execução vindas do app.py\n"
+                                "# Este arquivo é gerado automaticamente pelo app.py\n\n"
+                                f"CATEGORIA_WP = \"{categoria_wp}\"\n"
+                                f"STATUS_PUBLICACAO = \"{status_publicacao}\"  # 'draft' ou 'publish'\n"
+                                f"QUANTIDADE_TEXTOS = {quantidade_textos}\n"
+                                f"TOPICOS_LISTA = [\"{topicos_str}\"]\n"
+                                f"AUTHOR_ID = {author_id}\n\n"
+                                "def get_configuracoes_execucao():\n"
+                                "    return {\n"
+                                "        'categoria_wp': CATEGORIA_WP,\n"
+                                "        'status_publicacao': STATUS_PUBLICACAO,\n"
+                                "        'quantidade_textos': QUANTIDADE_TEXTOS,\n"
+                                "        'topicos_lista': TOPICOS_LISTA,\n"
+                                "        'author_id': AUTHOR_ID\n"
+                                "    }\n\n"
+                                "def set_configuracoes_execucao(categoria_wp=\"Others\", status_publicacao=\"draft\", quantidade_textos=3, topicos_lista=None, author_id=1):\n"
+                                "    global CATEGORIA_WP, STATUS_PUBLICACAO, QUANTIDADE_TEXTOS, TOPICOS_LISTA, AUTHOR_ID\n"
+                                "    CATEGORIA_WP = categoria_wp\n"
+                                "    STATUS_PUBLICACAO = status_publicacao\n"
+                                "    QUANTIDADE_TEXTOS = quantidade_textos\n"
+                                "    AUTHOR_ID = author_id\n"
+                                "    if topicos_lista:\n"
+                                "        TOPICOS_LISTA = topicos_lista\n"
+                            )
                             with open('config_execucao.py', 'w') as f:
-                                f.write(f"""# Configurações de execução vindas do app.py
-# Este arquivo é gerado automaticamente pelo app.py
-
-# Configurações atuais
-CATEGORIA_WP = "{categoria_wp}"
-STATUS_PUBLICACAO = "{status_publicacao}"  # "draft" ou "publish"
-QUANTIDADE_TEXTOS = {quantidade_textos}
-TOPICOS_LISTA = ["{topicos_str}"]
-AUTHOR_ID = {author_id}
-
-def get_configuracoes_execucao():
-    """Retorna as configurações de execução"""
-    return {{
-        'categoria_wp': CATEGORIA_WP,
-        'status_publicacao': STATUS_PUBLICACAO,
-        'quantidade_textos': QUANTIDADE_TEXTOS,
-        'topicos_lista': TOPICOS_LISTA,
-        'author_id': AUTHOR_ID
-    }}
-
-def set_configuracoes_execucao(categoria_wp="Others", status_publicacao="draft", quantidade_textos=3, topicos_lista=None, author_id=1):
-    """Define as configurações de execução"""
-    global CATEGORIA_WP, STATUS_PUBLICACAO, QUANTIDADE_TEXTOS, TOPICOS_LISTA, AUTHOR_ID
-    CATEGORIA_WP = categoria_wp
-    STATUS_PUBLICACAO = status_publicacao
-    QUANTIDADE_TEXTOS = quantidade_textos
-    AUTHOR_ID = author_id
-    if topicos_lista:
-        TOPICOS_LISTA = topicos_lista
-""")
+                                f.write(config_exec_code)
                         except Exception as e:
                             st.error(f"Erro ao salvar configurações: {e}")
                         
