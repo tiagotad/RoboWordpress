@@ -584,6 +584,71 @@ col1, col2 = st.columns([2, 1])
 with col1:
     st.markdown("## 🚀 Executar Robôs")
     
+    # === SEÇÃO DE CREDENCIAIS WORDPRESS ===
+    st.markdown("### 🔐 Credenciais do WordPress")
+    st.markdown("**Digite suas credenciais do WordPress para usar o robô:**")
+    
+    col_wp1, col_wp2 = st.columns(2)
+    
+    with col_wp1:
+        wp_url = st.text_input(
+            "🌐 URL do WordPress:",
+            value="https://www.elhombre.com.br",
+            placeholder="https://seu-site.com",
+            help="URL completa do seu site WordPress"
+        )
+        
+        wp_user = st.text_input(
+            "👤 Usuário:",
+            value="",
+            placeholder="seu_usuario",
+            help="Nome de usuário do WordPress (recomenda-se Admin ou Editor)"
+        )
+    
+    with col_wp2:
+        wp_password = st.text_input(
+            "🔑 Senha:",
+            value="",
+            type="password",
+            placeholder="sua_senha_ou_application_password",
+            help="Senha do usuário ou Application Password (se tiver 2FA ativo)"
+        )
+        
+        # Botão para testar conexão
+        if st.button("🧪 Testar Conexão", use_container_width=True):
+            if wp_url and wp_user and wp_password:
+                with st.spinner("Testando conexão..."):
+                    try:
+                        import requests
+                        from requests.auth import HTTPBasicAuth
+                        
+                        # Teste de autenticação
+                        response = requests.get(
+                            f'{wp_url}/wp-json/wp/v2/users/me',
+                            auth=HTTPBasicAuth(wp_user, wp_password),
+                            timeout=10
+                        )
+                        
+                        if response.status_code == 200:
+                            user_data = response.json()
+                            st.success(f"✅ Conexão OK! Usuário: {user_data.get('name', 'N/A')}")
+                        elif response.status_code == 401:
+                            st.error("❌ Falha na autenticação! Verifique usuário e senha.")
+                        else:
+                            st.error(f"⚠️ Erro: {response.status_code}")
+                    except Exception as e:
+                        st.error(f"❌ Erro de conexão: {e}")
+            else:
+                st.warning("⚠️ Preencha todos os campos!")
+    
+    # Verificar se credenciais foram fornecidas
+    credenciais_ok = bool(wp_url and wp_user and wp_password)
+    
+    if not credenciais_ok:
+        st.warning("⚠️ **Preencha as credenciais do WordPress acima antes de continuar**")
+    
+    st.markdown("---")
+    
     # Configurações para execução
     st.markdown("### ⚙️ Configurações de Execução")
     
@@ -615,70 +680,70 @@ with col1:
         def buscar_autores_wordpress(wp_url, wp_user, wp_password):
             return []
     
-    col_config1, col_config2, col_config3, col_config4 = st.columns(4)
+    # Mostrar configurações apenas se credenciais WordPress estiverem preenchidas
+    if credenciais_ok:
+        col_config1, col_config2, col_config3, col_config4 = st.columns(4)
 
-    # Buscar autores do WordPress
-    autores_wp = []
-    if status and status.get('wordpress'):
+        # Buscar autores do WordPress usando credenciais da interface
+        autores_wp = []
         try:
-            if is_streamlit_cloud:
-                wp_url = st.secrets.get('WP_URL', '')
-                wp_user = st.secrets.get('WP_USER', '')
-                wp_password = st.secrets.get('WP_PASSWORD', '')
-            else:
-                from config import WP_URL, WP_USER, WP_PASSWORD
-                wp_url = WP_URL
-                wp_user = WP_USER
-                wp_password = WP_PASSWORD
             autores_wp = buscar_autores_wordpress(wp_url, wp_user, wp_password)
         except Exception as e:
+            st.warning(f"⚠️ Não foi possível carregar autores: {e}")
             autores_wp = []
 
-    with col_config1:
-        categoria_wp = st.selectbox(
-            "📁 Categoria WordPress:",
-            ["Others", "Uncategorized", "News", "Technology", "Entertainment", "Travel", "Health", "Sports"],
-            index=0,
-            help="Escolha a categoria onde os posts serão publicados"
-        )
-
-    with col_config2:
-        status_publicacao = st.selectbox(
-            "📮 Status de Publicação:",
-            ["draft", "publish"],
-            index=0,
-            help="Escolha se os posts serão salvos como rascunho ou publicados diretamente"
-        )
-
-    with col_config3:
-        quantidade_maxima = min(len(topicos_lista), 10) if topicos_lista else 3
-        quantidade_textos = st.number_input(
-            "📝 Quantidade de Textos:",
-            min_value=1,
-            max_value=quantidade_maxima,
-            value=min(3, quantidade_maxima),
-            help=f"Número de textos que serão gerados (máximo: {quantidade_maxima} baseado nos tópicos inseridos)"
-        )
-
-    with col_config4:
-        if autores_wp:
-            autor_options = {f"{nome} (ID: {id})": id for id, nome in autores_wp}
-            autor_selecionado = st.selectbox(
-                "👤 Autor do Post:",
-                options=list(autor_options.keys()),
-                help="Selecione o autor que será atribuído ao post no WordPress"
+        with col_config1:
+            categoria_wp = st.selectbox(
+                "📁 Categoria WordPress:",
+                ["Others", "Uncategorized", "News", "Technology", "Entertainment", "Travel", "Health", "Sports"],
+                index=0,
+                help="Escolha a categoria onde os posts serão publicados"
             )
-            author_id = autor_options[autor_selecionado]
-        else:
-            st.warning("⚠️ Não foi possível carregar autores do WordPress")
-            author_id = st.number_input("ID do Autor:", min_value=1, value=1, help="ID do autor no WordPress")
 
-    # Salvar configurações na sessão
-    st.session_state['categoria_wp'] = categoria_wp
-    st.session_state['status_publicacao'] = status_publicacao
-    st.session_state['quantidade_textos'] = quantidade_textos
-    st.session_state['topicos_lista'] = topicos_lista[:quantidade_textos]  # Limitar aos selecionados
-    st.session_state['author_id'] = author_id
+        with col_config2:
+            status_publicacao = st.selectbox(
+                "📮 Status de Publicação:",
+                ["draft", "publish"],
+                index=0,
+                help="Escolha se os posts serão salvos como rascunho ou publicados diretamente"
+            )
+
+        with col_config3:
+            quantidade_maxima = min(len(topicos_lista), 10) if topicos_lista else 3
+            quantidade_textos = st.number_input(
+                "📝 Quantidade de Textos:",
+                min_value=1,
+                max_value=quantidade_maxima,
+                value=min(3, quantidade_maxima),
+                help=f"Número de textos que serão gerados (máximo: {quantidade_maxima} baseado nos tópicos inseridos)"
+            )
+
+        with col_config4:
+            if autores_wp:
+                autor_options = {f"{nome} (ID: {id})": id for id, nome in autores_wp}
+                autor_selecionado = st.selectbox(
+                    "👤 Autor do Post:",
+                    options=list(autor_options.keys()),
+                    help="Selecione o autor que será atribuído ao post no WordPress"
+                )
+                author_id = autor_options[autor_selecionado]
+            else:
+                if credenciais_ok:
+                    st.warning("⚠️ Não foi possível carregar autores do WordPress")
+                author_id = st.number_input("ID do Autor:", min_value=1, value=1, help="ID do autor no WordPress")
+
+        # Salvar configurações na sessão
+        st.session_state['categoria_wp'] = categoria_wp
+        st.session_state['status_publicacao'] = status_publicacao
+        st.session_state['quantidade_textos'] = quantidade_textos
+        st.session_state['topicos_lista'] = topicos_lista[:quantidade_textos]  # Limitar aos selecionados
+        st.session_state['author_id'] = author_id
+    else:
+        # Valores padrão quando credenciais não estão preenchidas
+        categoria_wp = "Others"
+        status_publicacao = "draft"
+        quantidade_textos = 3
+        author_id = 1
     
     st.markdown("---")
     
@@ -719,7 +784,23 @@ with col1:
                 if st.button(f"▶️ Executar", key=f"btn_{robot['arquivo']}", use_container_width=True):
                     if not topicos_lista:
                         st.warning("⚠️ Adicione pelo menos um tópico antes de executar!")
-                    elif status and all(status.values()):
+                    elif not credenciais_ok:
+                        st.warning("⚠️ Preencha as credenciais do WordPress antes de executar!")
+                    else:
+                        # Verificar se OpenAI está configurada
+                        try:
+                            if is_streamlit_cloud:
+                                openai_key = st.secrets.get('OPENAI_API_KEY', '')
+                            else:
+                                from config import OPENAI_API_KEY
+                                openai_key = OPENAI_API_KEY
+                            
+                            if not openai_key or len(openai_key) < 20:
+                                st.error("❌ Chave da OpenAI não configurada! Configure no arquivo .env ou secrets do Streamlit.")
+                                continue
+                        except Exception as e:
+                            st.error(f"❌ Erro ao verificar OpenAI: {e}")
+                            continue
                         # Nova lógica: gerar N textos para cada tópico
                         try:
                             topicos_expandidos = []
@@ -737,13 +818,20 @@ with col1:
                                 f"QUANTIDADE_TEXTOS = {quantidade_textos}\n"
                                 f"TOPICOS_LISTA = [\"{topicos_formatados}\"]\n"
                                 f"AUTHOR_ID = {author_id}\n\n"
+                                "# Credenciais WordPress da interface\n"
+                                f"WP_URL = \"{wp_url}\"\n"
+                                f"WP_USER = \"{wp_user}\"\n"
+                                f"WP_PASSWORD = \"{wp_password}\"\n\n"
                                 "def get_configuracoes_execucao():\n"
                                 "    return {\n"
                                 "        'categoria_wp': CATEGORIA_WP,\n"
                                 "        'status_publicacao': STATUS_PUBLICACAO,\n"
                                 "        'quantidade_textos': QUANTIDADE_TEXTOS,\n"
                                 "        'topicos_lista': TOPICOS_LISTA,\n"
-                                "        'author_id': AUTHOR_ID\n"
+                                "        'author_id': AUTHOR_ID,\n"
+                                "        'wp_url': WP_URL,\n"
+                                "        'wp_user': WP_USER,\n"
+                                "        'wp_password': WP_PASSWORD\n"
                                 "    }\n\n"
                                 "def set_configuracoes_execucao(categoria_wp=\"Others\", status_publicacao=\"draft\", quantidade_textos=3, topicos_lista=None, author_id=1):\n"
                                 "    global CATEGORIA_WP, STATUS_PUBLICACAO, QUANTIDADE_TEXTOS, TOPICOS_LISTA, AUTHOR_ID\n"
@@ -772,8 +860,6 @@ with col1:
                         if resultado['stdout']:
                             with st.expander("📋 Ver log completo da execução"):
                                 st.code(resultado['stdout'], language="text")
-                    else:
-                        st.warning("⚠️ Configure todas as credenciais antes de executar!")
 
             st.markdown('</div>', unsafe_allow_html=True)
 

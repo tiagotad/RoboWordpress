@@ -27,6 +27,16 @@ try:
     from config_execucao import get_configuracoes_execucao
     config_execucao = get_configuracoes_execucao()
     print(f"[INFO] Configurações de execução: {config_execucao}")
+    
+    # Se as credenciais WordPress estão no config_execucao, usar essas
+    if 'wp_url' in config_execucao and 'wp_user' in config_execucao and 'wp_password' in config_execucao:
+        WP_URL = config_execucao['wp_url']
+        WP_USER = config_execucao['wp_user'] 
+        WP_PASSWORD = config_execucao['wp_password']
+        print(f"[INFO] ✅ Usando credenciais WordPress da interface: {WP_URL}")
+    else:
+        print(f"[INFO] ⚠️ Usando credenciais WordPress do arquivo config.py")
+        
 except ImportError:
     print("[AVISO] Arquivo config_execucao.py não encontrado, usando configurações padrão")
     config_execucao = {

@@ -4,7 +4,7 @@
 CATEGORIA_WP = "Others"
 STATUS_PUBLICACAO = "draft"  # 'draft' ou 'publish'
 QUANTIDADE_TEXTOS = 1
-TOPICOS_LISTA = ["Tecnologia"]
+TOPICOS_LISTA = ["Tecnologia 2025"]
 AUTHOR_ID = 1
 
 def get_configuracoes_execucao():

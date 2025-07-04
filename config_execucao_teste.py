@@ -4,8 +4,13 @@
 CATEGORIA_WP = "Others"
 STATUS_PUBLICACAO = "draft"  # 'draft' ou 'publish'
 QUANTIDADE_TEXTOS = 1
-TOPICOS_LISTA = ["Teste de Post"]
-AUTHOR_ID = 1
+TOPICOS_LISTA = ["Teste de Interface"]
+AUTHOR_ID = 71
+
+# Credenciais WordPress da interface
+WP_URL = "https://www.elhombre.com.br"
+WP_USER = "eutiago"
+WP_PASSWORD = "oJrD 8N3S 7SPp 0Zcz q1vz o0Gd"
 
 def get_configuracoes_execucao():
     return {
@@ -13,14 +18,9 @@ def get_configuracoes_execucao():
         'status_publicacao': STATUS_PUBLICACAO,
         'quantidade_textos': QUANTIDADE_TEXTOS,
         'topicos_lista': TOPICOS_LISTA,
-        'author_id': AUTHOR_ID
+        'author_id': AUTHOR_ID,
+        'wp_url': WP_URL,
+        'wp_user': WP_USER,
+        'wp_password': WP_PASSWORD
     }
 
-def set_configuracoes_execucao(categoria_wp="Others", status_publicacao="draft", quantidade_textos=3, topicos_lista=None, author_id=1):
-    global CATEGORIA_WP, STATUS_PUBLICACAO, QUANTIDADE_TEXTOS, TOPICOS_LISTA, AUTHOR_ID
-    CATEGORIA_WP = categoria_wp
-    STATUS_PUBLICACAO = status_publicacao
-    QUANTIDADE_TEXTOS = quantidade_textos
-    AUTHOR_ID = author_id
-    if topicos_lista:
-        TOPICOS_LISTA = topicos_lista
