@@ -240,22 +240,9 @@ if topicos_config:
     topicos = topicos_config
     print(f"[INFO] Usando {len(topicos)} tópicos da configuração da interface")
 
-# Se não conseguir carregar, usar tópicos padrão
-if not topicos:
-    print("[AVISO] Usando tópicos padrão")
-    topicos = [
-        "Filmes e Cinema",
-        "Séries de TV", 
-        "História e Curiosidades",
-        "Viagem e Turismo",
-        "Livros e Literatura"
-    ]
-
-# Limitar quantidade de tópicos conforme configuração
 quantidade_maxima = config_execucao.get('quantidade_textos', 3)
-if len(topicos) > quantidade_maxima:
-    topicos = topicos[:quantidade_maxima]
-    print(f"[INFO] Limitando execução a {quantidade_maxima} tópicos conforme configuração")
+print(f"[INFO] Quantidade de textos por tópico (config): {quantidade_maxima}")
+# Não limitar a lista de tópicos aqui! A lista já vem expandida do frontend.
 
 print("Tópicos que serão processados:")
 for i, t in enumerate(topicos, 1):
@@ -264,9 +251,9 @@ for i, t in enumerate(topicos, 1):
 print("\n[INFO] *** VERSÃO V4 - AGORA COM GERAÇÃO DE IMAGENS AUTOMÁTICA! ***")
 
 # === GERAR CONTEÚDO + IMAGENS ===
-for topico_geral in topicos:
-    print(f"\n--- PROCESSANDO TÓPICO: {topico_geral} ---")
-
+for idx, topico_geral in enumerate(topicos, 1):
+    print(f"\n--- PROCESSANDO TÓPICO {idx}/{len(topicos)}: {topico_geral} ---")
+    print(f"[LOG] Iniciando geração de título para o tópico: {topico_geral}")
     try:
         # === GERAR TÍTULO ESPECÍFICO ===
         print("[INFO] 📝 Carregando prompt personalizado para título...")
@@ -284,9 +271,11 @@ for topico_geral in topicos:
         )
 
         titulo_especifico = response_titulo.choices[0].message.content.strip().strip('"')
-        print(f"[INFO] Título gerado: {titulo_especifico}")
+        print(f"[LOG] Título gerado para '{topico_geral}': {titulo_especifico}")
+        print(f"[EXEMPLO] Título retornado: {titulo_especifico}")
 
         # === GERAR ARTIGO ===
+        print(f"[LOG] Iniciando geração do artigo para o título: {titulo_especifico}")
         print("[INFO] 📄 Carregando prompt personalizado para artigo...")
         prompt_artigo = get_prompt_artigo(titulo_especifico, topico_geral)
 
@@ -301,6 +290,8 @@ for topico_geral in topicos:
         )
 
         conteudo = response_artigo.choices[0].message.content.strip()
+        print(f"[LOG] Artigo gerado para '{titulo_especifico}' (tópico: {topico_geral})")
+        print(f"[EXEMPLO] Início do artigo: {conteudo[:200]} ...\n---fim do preview---\n")
 
         # === GERAR IMAGEM COM DALL·E 3 ===
         print("[INFO] 🎨 Gerando imagem com DALL·E 3...")
