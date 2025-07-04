@@ -332,35 +332,59 @@ for idx, topico_geral in enumerate(topicos, 1):
                 media_id = upload_imagem_wordpress(nome_arquivo_img, titulo_especifico, alt_text)
         
         # === BUSCAR/CRIAR CATEGORIA ===
-        categoria_desejada = config_execucao.get('categoria_wp', 'Others')
+        categoria_config = config_execucao.get('categoria_wp', 32174)  # Padrão: 32174 (mundo)
+        
         try:
-            categories_endpoint = f"{WP_URL}/wp-json/wp/v2/categories"
-            categories_response = requests.get(categories_endpoint, auth=HTTPBasicAuth(WP_USER, WP_PASSWORD), timeout=10)
-            categories_response.raise_for_status()
-            
-            categories = categories_response.json()
-            category_id = None
-            
-            for category in categories:
-                if category['name'].lower() == categoria_desejada.lower():
-                    category_id = category['id']
-                    break
-            
-            if category_id is None:
-                create_category_data = {
-                    'name': categoria_desejada,
-                    'slug': categoria_desejada.lower().replace(' ', '-')
-                }
-                create_response = requests.post(categories_endpoint, json=create_category_data, auth=HTTPBasicAuth(WP_USER, WP_PASSWORD), timeout=10)
-                create_response.raise_for_status()
-                category_id = create_response.json()['id']
-                print(f"[INFO] Categoria '{categoria_desejada}' criada com ID: {category_id}")
+            # Se categoria_config é um número, usar como ID diretamente
+            if isinstance(categoria_config, (int, str)) and str(categoria_config).isdigit():
+                category_id = int(categoria_config)
+                print(f"[INFO] Usando categoria ID: {category_id}")
+                
+                # Verificar se a categoria existe (opcional)
+                try:
+                    category_check = requests.get(f"{WP_URL}/wp-json/wp/v2/categories/{category_id}", 
+                                                auth=HTTPBasicAuth(WP_USER, WP_PASSWORD), timeout=10)
+                    if category_check.status_code == 200:
+                        category_name = category_check.json().get('name', f'ID {category_id}')
+                        print(f"[INFO] Categoria verificada: '{category_name}' (ID: {category_id})")
+                    else:
+                        print(f"[AVISO] Categoria ID {category_id} pode não existir, mas tentando usar mesmo assim")
+                except:
+                    print(f"[INFO] Não foi possível verificar categoria ID {category_id}, mas prosseguindo")
+                    
             else:
-                print(f"[INFO] Usando categoria existente '{categoria_desejada}' com ID: {category_id}")
+                # Se categoria_config é texto, buscar por nome (comportamento antigo)
+                categoria_desejada = str(categoria_config)
+                print(f"[INFO] Buscando categoria por nome: '{categoria_desejada}'")
+                
+                categories_endpoint = f"{WP_URL}/wp-json/wp/v2/categories"
+                categories_response = requests.get(categories_endpoint, auth=HTTPBasicAuth(WP_USER, WP_PASSWORD), timeout=10)
+                categories_response.raise_for_status()
+                
+                categories = categories_response.json()
+                category_id = None
+                
+                for category in categories:
+                    if category['name'].lower() == categoria_desejada.lower():
+                        category_id = category['id']
+                        break
+                
+                if category_id is None:
+                    create_category_data = {
+                        'name': categoria_desejada,
+                        'slug': categoria_desejada.lower().replace(' ', '-')
+                    }
+                    create_response = requests.post(categories_endpoint, json=create_category_data, auth=HTTPBasicAuth(WP_USER, WP_PASSWORD), timeout=10)
+                    create_response.raise_for_status()
+                    category_id = create_response.json()['id']
+                    print(f"[INFO] Categoria '{categoria_desejada}' criada com ID: {category_id}")
+                else:
+                    print(f"[INFO] Usando categoria existente '{categoria_desejada}' com ID: {category_id}")
             
         except Exception as e:
-            print(f"[AVISO] Erro ao buscar/criar categoria '{categoria_desejada}': {e}")
-            category_id = 1
+            print(f"[AVISO] Erro ao processar categoria: {e}")
+            print(f"[INFO] Usando categoria padrão ID: 32174")
+            category_id = 32174
 
         # === PUBLICAR NO WORDPRESS ===
 
@@ -386,7 +410,7 @@ for idx, topico_geral in enumerate(topicos, 1):
         post_id = post_data_response['id']
 
         status_msg = "publicado" if status_publicacao == "publish" else "salvo como rascunho"
-        log_with_timestamp(f"[✔] Post {status_msg} com sucesso na categoria '{categoria_desejada}' (autor ID {author_id}): {titulo_especifico}")
+        log_with_timestamp(f"[✔] Post {status_msg} com sucesso na categoria ID {category_id} (autor ID {author_id}): {titulo_especifico}")
         log_with_timestamp(f"[RESULTADO] Post publicado com sucesso! ID: {post_id}")
         log_with_timestamp(f"[INFO] URL do post: {WP_URL}/?p={post_id}")
         

@@ -1,7 +1,7 @@
 # Configurações de execução vindas do app.py
 # Este arquivo é gerado automaticamente pelo app.py
 
-CATEGORIA_WP = "Others"
+CATEGORIA_WP = 32174
 STATUS_PUBLICACAO = "draft"  # 'draft' ou 'publish'
 QUANTIDADE_TEXTOS = 1
 TOPICOS_LISTA = ["Tecnologia 2025"]

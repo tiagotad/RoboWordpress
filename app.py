@@ -806,7 +806,7 @@ with col1:
         def buscar_autores_wordpress(wp_url, wp_user, wp_password):
             return []
         def buscar_categorias_wordpress(wp_url, wp_user, wp_password):
-            return ["Others", "Uncategorized"]
+            return [(32174, "mundo (ID: 32174)"), (1, "Uncategorized"), (0, "Others")]
         def buscar_usuario_atual(wp_url, wp_user, wp_password):
             return None
     
@@ -859,15 +859,24 @@ with col1:
                 
                 if st.session_state.wp_categorias:
                     st.success(f"✅ Carregadas {len(st.session_state.wp_categorias)} categorias do WordPress")
-                    # Debug: mostrar algumas categorias
-                    st.info(f"📁 Primeiras categorias: {', '.join(st.session_state.wp_categorias[:5])}")
+                    # Debug: mostrar algumas categorias com IDs
+                    categorias_debug = [f"{nome} (ID: {id})" for id, nome in st.session_state.wp_categorias[:5]]
+                    st.info(f"📁 Primeiras categorias: {', '.join(categorias_debug)}")
+                    
+                    # Verificar se categoria 32174 está na lista
+                    if 32174 in [id for id, nome in st.session_state.wp_categorias]:
+                        st.success("🎯 **Categoria padrão (32174 - mundo) encontrada na lista!**")
+                    else:
+                        st.info("🎯 **Categoria padrão (32174 - mundo) será adicionada à lista**")
                 else:
                     st.warning("⚠️ Nenhuma categoria encontrada - usando padrões")
+                    # Definir categorias padrão
+                    st.session_state.wp_categorias = [(32174, "mundo (ID: 32174)"), (1, "Uncategorized"), (0, "Others")]
                     
             except Exception as e:
                 st.error(f"❌ Erro ao carregar dados do WordPress: {e}")
                 st.session_state.wp_autores = []
-                st.session_state.wp_categorias = ["Others", "Uncategorized"]
+                st.session_state.wp_categorias = [(32174, "mundo (ID: 32174)"), (1, "Uncategorized"), (0, "Others")]
                 
     # Botão para recarregar dados se necessário
     if st.button("🔄 Recarregar Dados do WordPress", help="Clique se os autores/categorias não apareceram"):
@@ -884,12 +893,55 @@ with col1:
     col_config1, col_config2, col_config3, col_config4 = st.columns(4)
 
     with col_config1:
-        categoria_wp = st.selectbox(
-            "📁 Categoria WordPress:",
-            st.session_state.wp_categorias,
-            index=0,
-            help="Escolha a categoria onde os posts serão publicados"
-        )
+        if st.session_state.wp_categorias:
+            # Se conseguimos carregar categorias, mostrar lista com IDs
+            categoria_options = {f"{nome} (ID: {id})": id for id, nome in st.session_state.wp_categorias}
+            
+            # Adicionar manualmente a categoria 32174 se não estiver na lista
+            if 32174 not in [id for id, nome in st.session_state.wp_categorias]:
+                categoria_options["mundo (ID: 32174) - PADRÃO"] = 32174
+                st.info("✅ Categoria padrão (32174 - mundo) adicionada à lista")
+            
+            # Procurar se o ID 32174 existe na lista para definir como padrão
+            default_index = 0
+            categoria_32174_key = None
+            for key, cat_id in categoria_options.items():
+                if cat_id == 32174:
+                    categoria_32174_key = key
+                    break
+            
+            # Se encontrou o ID 32174, definir como padrão
+            if categoria_32174_key:
+                options_list = list(categoria_options.keys())
+                default_index = options_list.index(categoria_32174_key)
+            
+            categoria_selecionada = st.selectbox(
+                "📁 Categoria WordPress:",
+                options=list(categoria_options.keys()),
+                index=default_index,
+                help="Categoria onde os posts serão publicados. Padrão: 32174 (mundo)"
+            )
+            categoria_wp_id = categoria_options[categoria_selecionada]
+            
+            # Mostrar informação sobre a categoria selecionada
+            if categoria_wp_id == 32174:
+                st.success("🎯 **Categoria padrão (32174 - mundo) selecionada**")
+            else:
+                st.info(f"📁 Categoria selecionada: ID {categoria_wp_id}")
+        else:
+            # Se não conseguimos carregar categorias, usar ID 32174 como padrão
+            st.markdown("📁 **Categoria WordPress:**")
+            categoria_wp_id = st.number_input(
+                "ID da Categoria:",
+                min_value=1,
+                value=32174,  # ID 32174 como padrão
+                help="Digite o ID da categoria no WordPress. Padrão: 32174 (mundo)"
+            )
+            
+            if categoria_wp_id == 32174:
+                st.success("🎯 **Usando categoria padrão (32174 - mundo)**")
+            else:
+                st.info(f"📁 Categoria personalizada: ID {categoria_wp_id}")
 
     with col_config2:
         status_publicacao = st.selectbox(
@@ -979,7 +1031,7 @@ with col1:
                 """)
 
     # Salvar configurações na sessão
-    st.session_state['categoria_wp'] = categoria_wp
+    st.session_state['categoria_wp'] = categoria_wp_id
     st.session_state['status_publicacao'] = status_publicacao
     st.session_state['quantidade_textos'] = quantidade_textos
     st.session_state['topicos_lista'] = topicos_lista[:quantidade_textos]  # Limitar aos selecionados
@@ -1054,7 +1106,7 @@ with col1:
                             config_exec_code = (
                                 "# Configurações de execução vindas do app.py\n"
                                 "# Este arquivo é gerado automaticamente pelo app.py\n\n"
-                                f"CATEGORIA_WP = \"{categoria_wp}\"\n"
+                                f"CATEGORIA_WP = {categoria_wp_id}\n"
                                 f"STATUS_PUBLICACAO = \"{status_publicacao}\"  # 'draft' ou 'publish'\n"
                                 f"QUANTIDADE_TEXTOS = {quantidade_textos}\n"
                                 f"TOPICOS_LISTA = [\"{topicos_formatados}\"]\n"
@@ -1091,7 +1143,7 @@ with col1:
                         # Container para logs em tempo real
                         log_container = st.container()
 
-                        st.info(f"🎯 Executando com: Categoria={categoria_wp}, Status={status_publicacao}, Tópicos={len(topicos_expandidos)} (N tópicos x {quantidade_textos} textos)")
+                        st.info(f"🎯 Executando com: Categoria={categoria_wp_id}, Status={status_publicacao}, Tópicos={len(topicos_expandidos)} (N tópicos x {quantidade_textos} textos)")
                         st.info(f"📝 Debug: Lista expandida tem {len(topicos_expandidos)} entradas: {topicos_expandidos[:3]}{'...' if len(topicos_expandidos) > 3 else ''}")
 
                         # Executar o robô com logs em tempo real

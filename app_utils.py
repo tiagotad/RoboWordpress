@@ -133,47 +133,68 @@ def buscar_categorias_wordpress(wp_url, wp_user, wp_password):
         wp_password (str): Senha/Application Password do WordPress
     
     Returns:
-        list: Lista de strings com nomes das categorias
+        list: Lista de tuplas (id, nome) das categorias
     """
     try:
         # URL da API para buscar categorias
         api_url = f"{wp_url.rstrip('/')}/wp-json/wp/v2/categories"
         
+        print(f"[DEBUG] Buscando categorias em: {api_url}")
+        
         # Fazer requisição com autenticação
         response = requests.get(
             api_url,
             auth=HTTPBasicAuth(wp_user, wp_password),
-            timeout=10,
+            timeout=15,
             params={'per_page': 100}  # Buscar até 100 categorias
         )
         
+        print(f"[DEBUG] Status da resposta (categorias): {response.status_code}")
+        
         if response.status_code == 200:
             categorias = response.json()
+            print(f"[DEBUG] Encontradas {len(categorias)} categorias")
             
-            # Extrair nomes das categorias
+            # Extrair ID e nome das categorias
             lista_categorias = []
             for categoria in categorias:
-                if categoria.get('name'):
-                    lista_categorias.append(categoria['name'])
+                cat_id = categoria.get('id')
+                cat_name = categoria.get('name', 'Nome não disponível')
+                if cat_id and cat_name:
+                    lista_categorias.append((cat_id, cat_name))
+                    print(f"[DEBUG] Categoria: {cat_id} - {cat_name}")
             
-            # Adicionar categorias padrão se não existirem
-            categorias_padrao = ["Others", "Uncategorized", "News", "Technology", 
-                               "Entertainment", "Travel", "Health", "Sports"]
+            # Verificar se categoria 32174 (mundo) existe
+            categoria_mundo = next((cat for cat in lista_categorias if cat[0] == 32174), None)
+            if categoria_mundo:
+                print(f"[DEBUG] ✅ Categoria padrão (32174 - mundo) encontrada: {categoria_mundo[1]}")
+            else:
+                print(f"[DEBUG] ⚠️ Categoria padrão (32174 - mundo) não encontrada")
+                # Adicionar manualmente se não existir (pode não estar na primeira página)
+                lista_categorias.insert(0, (32174, "mundo (ID: 32174)"))
+                print(f"[DEBUG] ✅ Categoria padrão adicionada manualmente")
             
-            for cat_padrao in categorias_padrao:
-                if cat_padrao not in lista_categorias:
-                    lista_categorias.insert(0, cat_padrao)
+            # Adicionar outras categorias padrão se necessário
+            categorias_padrao = [
+                (1, "Uncategorized"),
+                (0, "Others")  # ID 0 como fallback
+            ]
+            
+            for cat_id, cat_name in categorias_padrao:
+                if not any(cat[0] == cat_id for cat in lista_categorias):
+                    lista_categorias.append((cat_id, cat_name))
             
             return lista_categorias
         else:
-            print(f"Erro ao buscar categorias: {response.status_code}")
-            return ["Others", "Uncategorized", "News", "Technology", 
-                   "Entertainment", "Travel", "Health", "Sports"]
+            print(f"[ERRO] Falha ao buscar categorias: {response.status_code}")
+            print(f"[ERRO] Resposta: {response.text[:200]}")
+            # Retornar categoria padrão em caso de erro
+            return [(32174, "mundo (ID: 32174)"), (1, "Uncategorized"), (0, "Others")]
             
     except Exception as e:
-        print(f"Erro ao conectar com WordPress para buscar categorias: {e}")
-        return ["Others", "Uncategorized", "News", "Technology", 
-               "Entertainment", "Travel", "Health", "Sports"]
+        print(f"[ERRO] Erro ao conectar com WordPress para buscar categorias: {e}")
+        # Retornar categoria padrão em caso de erro
+        return [(32174, "mundo (ID: 32174)"), (1, "Uncategorized"), (0, "Others")]
 
 def buscar_usuario_atual(wp_url, wp_user, wp_password):
     """

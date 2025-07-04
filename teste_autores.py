@@ -54,10 +54,17 @@ def teste_autores():
     
     if categorias:
         print(f"✅ Sucesso! Encontradas {len(categorias)} categorias:")
-        for categoria in categorias[:10]:  # Mostrar apenas as primeiras 10
-            print(f"  - {categoria}")
+        for categoria_id, categoria_nome in categorias[:10]:  # Mostrar apenas as primeiras 10
+            print(f"  - ID: {categoria_id} | Nome: {categoria_nome}")
         if len(categorias) > 10:
             print(f"  ... e mais {len(categorias) - 10} categorias")
+            
+        # Verificar se categoria 32174 (mundo) está na lista
+        if 32174 in [id for id, nome in categorias]:
+            categoria_mundo = next((nome for id, nome in categorias if id == 32174), "N/A")
+            print(f"🎯 Categoria padrão (32174) encontrada: {categoria_mundo}")
+        else:
+            print(f"⚠️ Categoria padrão (32174 - mundo) não encontrada na lista")
     else:
         print("❌ Nenhuma categoria encontrada!")
 
