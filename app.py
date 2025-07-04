@@ -635,23 +635,25 @@ with col1:
     for robot in robots:
         with st.container():
             st.markdown(f'<div class="robot-card">', unsafe_allow_html=True)
-            
+
             col_robot1, col_robot2 = st.columns([3, 1])
-            
+
             with col_robot1:
                 st.markdown(f"### {robot['icon']} {robot['nome']}")
                 st.markdown(f"*{robot['descricao']}*")
                 st.markdown(f"**Arquivo:** `{robot['arquivo']}`")
-            
+
             with col_robot2:
                 if st.button(f"▶️ Executar", key=f"btn_{robot['arquivo']}", use_container_width=True):
                     if not topicos_lista:
                         st.warning("⚠️ Adicione pelo menos um tópico antes de executar!")
                     elif status and all(status.values()):
-                        # Salvar configurações antes de executar
+                        # Nova lógica: gerar N textos para cada tópico
                         try:
-                            topicos_para_salvar = topicos_lista[:quantidade_textos]
-                            topicos_str = '\", \"'.join(topicos_para_salvar)
+                            topicos_expandidos = []
+                            for topico in topicos_lista:
+                                topicos_expandidos.extend([topico] * int(quantidade_textos))
+                            topicos_str = '\", \"'.join(topicos_expandidos)
                             config_exec_code = (
                                 "# Configurações de execução vindas do app.py\n"
                                 "# Este arquivo é gerado automaticamente pelo app.py\n\n"
@@ -681,22 +683,22 @@ with col1:
                                 f.write(config_exec_code)
                         except Exception as e:
                             st.error(f"Erro ao salvar configurações: {e}")
-                        
+
                         # Container para logs em tempo real
                         log_container = st.container()
-                        
-                        st.info(f"🎯 Executando com: Categoria={categoria_wp}, Status={status_publicacao}, Tópicos={len(topicos_para_salvar)}")
-                        
+
+                        st.info(f"🎯 Executando com: Categoria={categoria_wp}, Status={status_publicacao}, Tópicos={len(topicos_expandidos)} (N tópicos x {quantidade_textos} textos)")
+
                         # Executar o robô com logs em tempo real
                         resultado = executar_comando_com_logs(robot['arquivo'], robot['nome'], log_container)
-                        
+
                         # Mostrar output detalhado se houver
                         if resultado['stdout']:
                             with st.expander("📋 Ver log completo da execução"):
                                 st.code(resultado['stdout'], language="text")
                     else:
                         st.warning("⚠️ Configure todas as credenciais antes de executar!")
-            
+
             st.markdown('</div>', unsafe_allow_html=True)
 
 with col2:
