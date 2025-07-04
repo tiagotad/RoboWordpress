@@ -75,10 +75,179 @@ st.markdown("""
 # Versão do app
 APP_VERSION = "2.0.0 - Interface de Tópicos Integrada 2025-07-02"
 
-# Título principal com versão
+# Função para validar credenciais WordPress
+def validar_credenciais_wordpress(wp_url, wp_user, wp_password):
+    """Valida as credenciais do WordPress testando a conexão com a API"""
+    try:
+        import requests
+        from requests.auth import HTTPBasicAuth
+        
+        # Garantir que a URL termina sem barra
+        wp_url = wp_url.rstrip('/')
+        
+        # Teste de autenticação
+        response = requests.get(
+            f'{wp_url}/wp-json/wp/v2/users/me',
+            auth=HTTPBasicAuth(wp_user, wp_password),
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            user_data = response.json()
+            return True, f"Conectado como: {user_data.get('name', 'N/A')}"
+        elif response.status_code == 401:
+            return False, "Falha na autenticação! Verifique usuário e senha."
+        else:
+            return False, f"Erro na conexão: {response.status_code}"
+    except requests.exceptions.Timeout:
+        return False, "Timeout: O site demorou para responder"
+    except requests.exceptions.ConnectionError:
+        return False, "Erro de conexão: Verifique se a URL está correta"
+    except Exception as e:
+        return False, f"Erro: {str(e)}"
+
+# Modal de Login Obrigatório
+if 'wp_authenticated' not in st.session_state:
+    st.session_state.wp_authenticated = False
+    st.session_state.wp_url = ""
+    st.session_state.wp_user = ""
+    st.session_state.wp_password = ""
+    st.session_state.wp_user_info = ""
+
+# Se não estiver autenticado, mostrar apenas o modal de login
+if not st.session_state.wp_authenticated:
+    st.markdown(f'<h1 class="main-header">🔐 RoboWordpress - Login Obrigatório</h1>', unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    st.markdown("""
+    ## 🚨 **Acesso Restrito**
+    
+    **Para usar o RoboWordpress, você deve fornecer credenciais válidas do WordPress.**
+    
+    ⚡ **Após o login bem-sucedido:**
+    - ✅ Carregamento automático de autores e categorias
+    - ✅ Configurações dinâmicas baseadas no seu site
+    - ✅ Execução segura dos robôs com suas credenciais
+    """)
+    
+    with st.container():
+        st.markdown("### 🔑 **Credenciais do WordPress**")
+        
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            wp_url_input = st.text_input(
+                "🌐 URL do WordPress:",
+                value="https://www.elhombre.com.br",
+                placeholder="https://seu-site-wordpress.com",
+                help="URL completa do seu site WordPress (sem barra no final)"
+            )
+            
+            wp_user_input = st.text_input(
+                "👤 Usuário:",
+                placeholder="seu_usuario",
+                help="Nome de usuário do WordPress (Admin/Editor recomendado)"
+            )
+        
+        with col2:
+            wp_password_input = st.text_input(
+                "🔑 Senha:",
+                type="password",
+                placeholder="sua_senha_ou_application_password",
+                help="Senha do usuário ou Application Password (recomendado para 2FA)"
+            )
+            
+            st.markdown("### 📋 **Sobre Application Passwords:**")
+            st.info("""
+            💡 **Recomendado:** Use Application Passwords se tiver 2FA ativo
+            
+            **Como criar:**
+            1. WordPress Admin → Usuários → Seu Perfil
+            2. Role até "Application Passwords"
+            3. Digite um nome (ex: "RoboWordpress")
+            4. Clique "Add New Application Password"
+            5. Copie a senha gerada (formato: xxxx xxxx xxxx)
+            """)
+        
+        st.markdown("---")
+        
+        col_login, col_help = st.columns([1, 2])
+        
+        with col_login:
+            if st.button("🔐 **FAZER LOGIN**", type="primary", use_container_width=True):
+                if not wp_url_input or not wp_user_input or not wp_password_input:
+                    st.error("❌ **Todos os campos são obrigatórios!**")
+                else:
+                    with st.spinner("🔍 Validando credenciais..."):
+                        sucesso, mensagem = validar_credenciais_wordpress(wp_url_input, wp_user_input, wp_password_input)
+                        
+                        if sucesso:
+                            # Salvar credenciais na sessão
+                            st.session_state.wp_authenticated = True
+                            st.session_state.wp_url = wp_url_input.rstrip('/')
+                            st.session_state.wp_user = wp_user_input
+                            st.session_state.wp_password = wp_password_input
+                            st.session_state.wp_user_info = mensagem
+                            
+                            st.success(f"✅ **Login bem-sucedido!** {mensagem}")
+                            st.success("🔄 **Recarregando aplicação com suas credenciais...**")
+                            time.sleep(2)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ **Falha no login:** {mensagem}")
+        
+        with col_help:
+            with st.expander("🆘 **Problemas para fazer login?**"):
+                st.markdown("""
+                ### 🔧 **Soluções Comuns:**
+                
+                **❌ Erro 401 (Não autorizado):**
+                - Verifique usuário e senha
+                - Use Application Password se tiver 2FA
+                
+                **❌ Timeout/Conexão:**
+                - Verifique se a URL está correta
+                - Teste: `https://seu-site.com/wp-admin`
+                
+                **❌ Erro 403 (Proibido):**
+                - Usuário precisa ser Admin ou Editor
+                - Verifique permissões da API REST
+                
+                **✅ Teste manual:**
+                - Acesse: `sua-url.com/wp-json/wp/v2`
+                - Deve mostrar informações da API
+                """)
+    
+    st.stop()  # Para a execução aqui até o login ser feito
+
+# Se chegou aqui, está autenticado - continuar com a aplicação normal
 st.markdown(f'<h1 class="main-header">🤖 RoboWordpress - Painel de Controle <span style="font-size:1.2rem;color:#888;">v{APP_VERSION}</span></h1>', unsafe_allow_html=True)
 
-# ⚠️ SEÇÃO DE CONFIGURAÇÃO DESTACADA
+# Mostrar info de usuário logado
+st.markdown(f"""
+<div style="background-color: #d4edda; padding: 1rem; border-radius: 10px; margin-bottom: 2rem; border-left: 4px solid #28a745;">
+    <h4 style="margin: 0; color: #155724;">✅ Conectado com sucesso!</h4>
+    <p style="margin: 0.5rem 0 0 0; color: #155724;">
+        <strong>Site:</strong> {st.session_state.wp_url} | 
+        <strong>Status:</strong> {st.session_state.wp_user_info}
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+# Botão de logout
+col_logout, col_space = st.columns([1, 4])
+with col_logout:
+    if st.button("🚪 Sair", help="Fazer logout e limpar credenciais"):
+        st.session_state.wp_authenticated = False
+        st.session_state.wp_url = ""
+        st.session_state.wp_user = ""
+        st.session_state.wp_password = ""
+        st.session_state.wp_user_info = ""
+        st.success("👋 Logout realizado!")
+        time.sleep(1)
+        st.rerun()
+
 st.markdown("---")
 
 
@@ -162,19 +331,24 @@ st.sidebar.markdown("## 📊 Status do Sistema")
 def verificar_configuracoes():
     """Verifica se todas as configurações estão corretas"""
     try:
+        # Pegar credenciais WordPress da sessão autenticada
+        WP_URL = st.session_state.get('wp_url', '')
+        WP_USER = st.session_state.get('wp_user', '')
+        WP_PASSWORD = st.session_state.get('wp_password', '')
+        
+        # Pegar OpenAI das configurações
         if is_streamlit_cloud:
-            # Pega variáveis dos secrets do Streamlit Cloud
-            WP_URL = st.secrets.get('WP_URL', '')
-            WP_USER = st.secrets.get('WP_USER', '')
-            WP_PASSWORD = st.secrets.get('WP_PASSWORD', '')
             OPENAI_API_KEY = st.secrets.get('OPENAI_API_KEY', '')
         else:
             # Importar config local
             sys.path.append(os.getcwd())
-            from config import WP_URL, WP_USER, WP_PASSWORD, OPENAI_API_KEY
+            try:
+                from config import OPENAI_API_KEY
+            except ImportError:
+                OPENAI_API_KEY = ''
 
-        # Verificações essenciais (sem Google Sheets)
-        wp_ok = WP_URL not in ['https://exemplo.com', 'https://seu-site.com', '', None] and WP_PASSWORD not in ['senha', 'sua_senha', '', None]
+        # Verificações essenciais
+        wp_ok = bool(WP_URL and WP_USER and WP_PASSWORD)
         openai_ok = OPENAI_API_KEY and len(OPENAI_API_KEY) > 20 and OPENAI_API_KEY.startswith('sk-')
 
         status = {
@@ -190,7 +364,10 @@ def verificar_configuracoes():
     except Exception as e:
         return None, f"Erro ao carregar configurações: {str(e)}"
 
-# Verificar status
+# Sidebar com informações
+st.sidebar.markdown("## 📊 Status do Sistema")
+
+# Verificar status baseado na sessão autenticada
 status, config_info = verificar_configuracoes()
 
 if status:
@@ -210,6 +387,12 @@ if status:
         st.sidebar.markdown(f"**Site:** {config_info['wp_url']}")
         st.sidebar.markdown(f"**Usuário:** {config_info['wp_user']}")
         st.sidebar.markdown("**Tópicos:** Configurados na interface")
+        
+        # Mostrar dados carregados do WordPress
+        if 'wp_autores' in st.session_state:
+            st.sidebar.markdown(f"**Autores:** {len(st.session_state.wp_autores)} encontrados")
+        if 'wp_categorias' in st.session_state:
+            st.sidebar.markdown(f"**Categorias:** {len(st.session_state.wp_categorias)} encontradas")
 else:
     st.sidebar.error(f"⚠️ {config_info}")
 
@@ -584,68 +767,11 @@ col1, col2 = st.columns([2, 1])
 with col1:
     st.markdown("## 🚀 Executar Robôs")
     
-    # === SEÇÃO DE CREDENCIAIS WORDPRESS ===
-    st.markdown("### 🔐 Credenciais do WordPress")
-    st.markdown("**Digite suas credenciais do WordPress para usar o robô:**")
-    
-    col_wp1, col_wp2 = st.columns(2)
-    
-    with col_wp1:
-        wp_url = st.text_input(
-            "🌐 URL do WordPress:",
-            value="https://www.elhombre.com.br",
-            placeholder="https://seu-site.com",
-            help="URL completa do seu site WordPress"
-        )
-        
-        wp_user = st.text_input(
-            "👤 Usuário:",
-            value="",
-            placeholder="seu_usuario",
-            help="Nome de usuário do WordPress (recomenda-se Admin ou Editor)"
-        )
-    
-    with col_wp2:
-        wp_password = st.text_input(
-            "🔑 Senha:",
-            value="",
-            type="password",
-            placeholder="sua_senha_ou_application_password",
-            help="Senha do usuário ou Application Password (se tiver 2FA ativo)"
-        )
-        
-        # Botão para testar conexão
-        if st.button("🧪 Testar Conexão", use_container_width=True):
-            if wp_url and wp_user and wp_password:
-                with st.spinner("Testando conexão..."):
-                    try:
-                        import requests
-                        from requests.auth import HTTPBasicAuth
-                        
-                        # Teste de autenticação
-                        response = requests.get(
-                            f'{wp_url}/wp-json/wp/v2/users/me',
-                            auth=HTTPBasicAuth(wp_user, wp_password),
-                            timeout=10
-                        )
-                        
-                        if response.status_code == 200:
-                            user_data = response.json()
-                            st.success(f"✅ Conexão OK! Usuário: {user_data.get('name', 'N/A')}")
-                        elif response.status_code == 401:
-                            st.error("❌ Falha na autenticação! Verifique usuário e senha.")
-                        else:
-                            st.error(f"⚠️ Erro: {response.status_code}")
-                    except Exception as e:
-                        st.error(f"❌ Erro de conexão: {e}")
-            else:
-                st.warning("⚠️ Preencha todos os campos!")
-    
-    # Verificar se credenciais foram fornecidas
-    credenciais_ok = bool(wp_url and wp_user and wp_password)
-    
-    if not credenciais_ok:
-        st.warning("⚠️ **Preencha as credenciais do WordPress acima antes de continuar**")
+    # Usar credenciais da sessão autenticada
+    wp_url = st.session_state.wp_url
+    wp_user = st.session_state.wp_user 
+    wp_password = st.session_state.wp_password
+    credenciais_ok = True  # Já validado no login
     
     st.markdown("---")
     
@@ -673,77 +799,88 @@ with col1:
     
     # Importar função utilitária com tratamento de erro
     try:
-        from app_utils import buscar_autores_wordpress
+        from app_utils import buscar_autores_wordpress, buscar_categorias_wordpress
     except ImportError as e:
         st.error(f"Erro ao importar app_utils: {e}")
         # Função alternativa simples em caso de erro
         def buscar_autores_wordpress(wp_url, wp_user, wp_password):
             return []
+        def buscar_categorias_wordpress(wp_url, wp_user, wp_password):
+            return ["Others", "Uncategorized"]
     
-    # Mostrar configurações apenas se credenciais WordPress estiverem preenchidas
-    if credenciais_ok:
-        col_config1, col_config2, col_config3, col_config4 = st.columns(4)
+    # Carregar dados do WordPress automaticamente (usando credenciais da sessão)
+    if 'wp_autores' not in st.session_state or 'wp_categorias' not in st.session_state:
+        with st.spinner("🔄 Carregando dados do WordPress..."):
+            try:
+                # Buscar autores
+                st.session_state.wp_autores = buscar_autores_wordpress(wp_url, wp_user, wp_password)
+                
+                # Buscar categorias
+                st.session_state.wp_categorias = buscar_categorias_wordpress(wp_url, wp_user, wp_password)
+                
+                if st.session_state.wp_autores:
+                    st.success(f"✅ Carregados {len(st.session_state.wp_autores)} autores do WordPress")
+                else:
+                    st.warning("⚠️ Nenhum autor encontrado - usando configuração padrão")
+                
+                if st.session_state.wp_categorias:
+                    st.success(f"✅ Carregadas {len(st.session_state.wp_categorias)} categorias do WordPress")
+                    
+            except Exception as e:
+                st.error(f"❌ Erro ao carregar dados do WordPress: {e}")
+                st.session_state.wp_autores = []
+                st.session_state.wp_categorias = ["Others", "Uncategorized"]
+    
+    # Configurações para execução (agora usando dados carregados automaticamente)
+    st.markdown("### ⚙️ Configurações de Execução")
+    
+    col_config1, col_config2, col_config3, col_config4 = st.columns(4)
 
-        # Buscar autores do WordPress usando credenciais da interface
-        autores_wp = []
-        try:
-            autores_wp = buscar_autores_wordpress(wp_url, wp_user, wp_password)
-        except Exception as e:
-            st.warning(f"⚠️ Não foi possível carregar autores: {e}")
-            autores_wp = []
+    with col_config1:
+        categoria_wp = st.selectbox(
+            "📁 Categoria WordPress:",
+            st.session_state.wp_categorias,
+            index=0,
+            help="Escolha a categoria onde os posts serão publicados"
+        )
 
-        with col_config1:
-            categoria_wp = st.selectbox(
-                "📁 Categoria WordPress:",
-                ["Others", "Uncategorized", "News", "Technology", "Entertainment", "Travel", "Health", "Sports"],
-                index=0,
-                help="Escolha a categoria onde os posts serão publicados"
+    with col_config2:
+        status_publicacao = st.selectbox(
+            "📮 Status de Publicação:",
+            ["draft", "publish"],
+            index=0,
+            help="Escolha se os posts serão salvos como rascunho ou publicados diretamente"
+        )
+
+    with col_config3:
+        quantidade_maxima = min(len(topicos_lista), 10) if topicos_lista else 3
+        quantidade_textos = st.number_input(
+            "📝 Quantidade de Textos:",
+            min_value=1,
+            max_value=quantidade_maxima,
+            value=min(3, quantidade_maxima),
+            help=f"Número de textos que serão gerados (máximo: {quantidade_maxima} baseado nos tópicos inseridos)"
+        )
+
+    with col_config4:
+        if st.session_state.wp_autores:
+            autor_options = {f"{nome} (ID: {id})": id for id, nome in st.session_state.wp_autores}
+            autor_selecionado = st.selectbox(
+                "👤 Autor do Post:",
+                options=list(autor_options.keys()),
+                help="Selecione o autor que será atribuído ao post no WordPress"
             )
+            author_id = autor_options[autor_selecionado]
+        else:
+            st.warning("⚠️ Autores não carregados - usando ID padrão")
+            author_id = st.number_input("ID do Autor:", min_value=1, value=1, help="ID do autor no WordPress")
 
-        with col_config2:
-            status_publicacao = st.selectbox(
-                "📮 Status de Publicação:",
-                ["draft", "publish"],
-                index=0,
-                help="Escolha se os posts serão salvos como rascunho ou publicados diretamente"
-            )
-
-        with col_config3:
-            quantidade_maxima = min(len(topicos_lista), 10) if topicos_lista else 3
-            quantidade_textos = st.number_input(
-                "📝 Quantidade de Textos:",
-                min_value=1,
-                max_value=quantidade_maxima,
-                value=min(3, quantidade_maxima),
-                help=f"Número de textos que serão gerados (máximo: {quantidade_maxima} baseado nos tópicos inseridos)"
-            )
-
-        with col_config4:
-            if autores_wp:
-                autor_options = {f"{nome} (ID: {id})": id for id, nome in autores_wp}
-                autor_selecionado = st.selectbox(
-                    "👤 Autor do Post:",
-                    options=list(autor_options.keys()),
-                    help="Selecione o autor que será atribuído ao post no WordPress"
-                )
-                author_id = autor_options[autor_selecionado]
-            else:
-                if credenciais_ok:
-                    st.warning("⚠️ Não foi possível carregar autores do WordPress")
-                author_id = st.number_input("ID do Autor:", min_value=1, value=1, help="ID do autor no WordPress")
-
-        # Salvar configurações na sessão
-        st.session_state['categoria_wp'] = categoria_wp
-        st.session_state['status_publicacao'] = status_publicacao
-        st.session_state['quantidade_textos'] = quantidade_textos
-        st.session_state['topicos_lista'] = topicos_lista[:quantidade_textos]  # Limitar aos selecionados
-        st.session_state['author_id'] = author_id
-    else:
-        # Valores padrão quando credenciais não estão preenchidas
-        categoria_wp = "Others"
-        status_publicacao = "draft"
-        quantidade_textos = 3
-        author_id = 1
+    # Salvar configurações na sessão
+    st.session_state['categoria_wp'] = categoria_wp
+    st.session_state['status_publicacao'] = status_publicacao
+    st.session_state['quantidade_textos'] = quantidade_textos
+    st.session_state['topicos_lista'] = topicos_lista[:quantidade_textos]  # Limitar aos selecionados
+    st.session_state['author_id'] = author_id
     
     st.markdown("---")
     
@@ -784,16 +921,17 @@ with col1:
                 if st.button(f"▶️ Executar", key=f"btn_{robot['arquivo']}", use_container_width=True):
                     if not topicos_lista:
                         st.warning("⚠️ Adicione pelo menos um tópico antes de executar!")
-                    elif not credenciais_ok:
-                        st.warning("⚠️ Preencha as credenciais do WordPress antes de executar!")
                     else:
                         # Verificar se OpenAI está configurada
                         try:
                             if is_streamlit_cloud:
                                 openai_key = st.secrets.get('OPENAI_API_KEY', '')
                             else:
-                                from config import OPENAI_API_KEY
-                                openai_key = OPENAI_API_KEY
+                                try:
+                                    from config import OPENAI_API_KEY
+                                    openai_key = OPENAI_API_KEY
+                                except ImportError:
+                                    openai_key = ''
                             
                             if not openai_key or len(openai_key) < 20:
                                 st.error("❌ Chave da OpenAI não configurada! Configure no arquivo .env ou secrets do Streamlit.")
