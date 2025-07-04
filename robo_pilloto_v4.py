@@ -7,6 +7,7 @@ import requests
 import time
 import base64
 from io import BytesIO
+from datetime import datetime
 from openai import OpenAI
 from requests.auth import HTTPBasicAuth
 import gspread
@@ -48,6 +49,11 @@ client = OpenAI(
 
 print("\n--- ROBÔ PILLOTO V4 - COM GERAÇÃO DE IMAGENS DALL·E 3 ---")
 print("[INFO] ✨ Esta versão gera imagens automaticamente para cada post!")
+
+def log_with_timestamp(message):
+    """Adiciona timestamp aos logs"""
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    print(f"[{timestamp}] {message}")
 
 def gerar_prompt_imagem(titulo, conteudo_resumo):
     """Gera um prompt otimizado para DALL·E 3 baseado no título e conteúdo do artigo"""
@@ -252,11 +258,11 @@ print("\n[INFO] *** VERSÃO V4 - AGORA COM GERAÇÃO DE IMAGENS AUTOMÁTICA! ***
 
 # === GERAR CONTEÚDO + IMAGENS ===
 for idx, topico_geral in enumerate(topicos, 1):
-    print(f"\n--- PROCESSANDO TÓPICO {idx}/{len(topicos)}: {topico_geral} ---")
-    print(f"[LOG] Iniciando geração de título para o tópico: {topico_geral}")
+    log_with_timestamp(f"--- PROCESSANDO TÓPICO {idx}/{len(topicos)}: {topico_geral} ---")
+    log_with_timestamp(f"[LOG] Iniciando geração de título para o tópico: {topico_geral}")
     try:
         # === GERAR TÍTULO ESPECÍFICO ===
-        print("[INFO] 📝 Carregando prompt personalizado para título...")
+        log_with_timestamp("[INFO] 📝 Carregando prompt personalizado para título...")
         prompt_titulo = get_prompt_titulo(topico_geral)
         system_prompts = get_system_prompts()
 
@@ -271,12 +277,12 @@ for idx, topico_geral in enumerate(topicos, 1):
         )
 
         titulo_especifico = response_titulo.choices[0].message.content.strip().strip('"')
-        print(f"[LOG] Título gerado para '{topico_geral}': {titulo_especifico}")
-        print(f"[EXEMPLO] Título retornado: {titulo_especifico}")
+        log_with_timestamp(f"[LOG] Título gerado para '{topico_geral}': {titulo_especifico}")
+        log_with_timestamp(f"[EXEMPLO] Título retornado: {titulo_especifico}")
 
         # === GERAR ARTIGO ===
-        print(f"[LOG] Iniciando geração do artigo para o título: {titulo_especifico}")
-        print("[INFO] 📄 Carregando prompt personalizado para artigo...")
+        log_with_timestamp(f"[LOG] Iniciando geração do artigo para o título: {titulo_especifico}")
+        log_with_timestamp("[INFO] 📄 Carregando prompt personalizado para artigo...")
         prompt_artigo = get_prompt_artigo(titulo_especifico, topico_geral)
 
         response_artigo = client.chat.completions.create(
@@ -290,11 +296,11 @@ for idx, topico_geral in enumerate(topicos, 1):
         )
 
         conteudo = response_artigo.choices[0].message.content.strip()
-        print(f"[LOG] Artigo gerado para '{titulo_especifico}' (tópico: {topico_geral})")
-        print(f"[EXEMPLO] Início do artigo: {conteudo[:200]} ...\n---fim do preview---\n")
+        log_with_timestamp(f"[LOG] Artigo gerado para '{titulo_especifico}' (tópico: {topico_geral})")
+        log_with_timestamp(f"[EXEMPLO] Início do artigo: {conteudo[:200]}...")
 
         # === GERAR IMAGEM COM DALL·E 3 ===
-        print("[INFO] 🎨 Gerando imagem com DALL·E 3...")
+        log_with_timestamp("[LOG] 🎨 Gerando imagem com DALL·E 3...")
         
         # Criar prompt para imagem baseado no título e conteúdo
         prompt_imagem = gerar_prompt_imagem(titulo_especifico, conteudo[:500])
@@ -389,7 +395,8 @@ for idx, topico_geral in enumerate(topicos, 1):
                 pass
 
     except Exception as e:
-        print(f"[ERRO ao gerar/publicar '{titulo_especifico if 'titulo_especifico' in locals() else topico_geral}']: {e}")
+        log_with_timestamp(f"[ERRO] Falha ao processar tópico '{topico_geral}': {e}")
+        # ...existing code...
 
     print(f"[INFO] ⏱️ Aguardando 15 segundos antes do próximo post...")
     time.sleep(15)  # Tempo maior entre posts devido à geração de imagens

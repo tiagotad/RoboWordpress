@@ -10,16 +10,7 @@ import threading
 from io import StringIO
 import json
 
-# DEBUG: Listar pacotes instalados no ambiente cloud
-def show_installed_packages():
-    try:
-        import pkg_resources
-        installed = sorted([d.project_name for d in pkg_resources.working_set])
-        st.markdown(f"<div style='color:#888;font-size:0.9rem;'>[DEBUG: Pacotes instalados: <b>{', '.join(installed)}</b>]</div>", unsafe_allow_html=True)
-    except Exception as e:
-        st.markdown(f"<div style='color:#c00;font-size:0.9rem;'>[DEBUG: Erro ao listar pacotes: {e}]</div>", unsafe_allow_html=True)
-
-# Detectar ambiente cloud antes de tudo
+# Detectar ambiente cloud
 def detect_streamlit_cloud():
     if os.getenv('STREAMLIT_CLOUD', '').lower() == 'true':
         return 'envvar'
@@ -32,10 +23,6 @@ def detect_streamlit_cloud():
 
 is_streamlit_cloud_mode = detect_streamlit_cloud()
 is_streamlit_cloud = bool(is_streamlit_cloud_mode)
-
-# Mostrar pacotes instalados no topo se rodando no cloud
-if is_streamlit_cloud:
-    show_installed_packages()
 
 # Configurar página
 st.set_page_config(
@@ -113,9 +100,6 @@ def detect_streamlit_cloud():
 
 is_streamlit_cloud_mode = detect_streamlit_cloud()
 is_streamlit_cloud = bool(is_streamlit_cloud_mode)
-
-# Mostra no topo qual modo de detecção foi ativado (debug visual)
-st.markdown(f"<div style='color:#888;font-size:0.9rem;'>[DEBUG: Streamlit Cloud Mode: <b>{is_streamlit_cloud_mode or 'local'}</b>]</div>", unsafe_allow_html=True)
 
 if is_streamlit_cloud:
     st.markdown("## 🌐 **RODANDO NO STREAMLIT CLOUD**")
@@ -273,13 +257,6 @@ def executar_comando_com_logs(comando, nome_processo, log_container):
     progress_bar = log_container.progress(0)
     progress_text = log_container.empty()
     
-    # DEBUG: Listar arquivos do diretório cloud antes de rodar subprocesso
-    if is_streamlit_cloud:
-        try:
-            files = os.listdir('/mount/src/robowordpress')
-            st.info(f"[DEBUG] Arquivos em /mount/src/robowordpress: {files}")
-        except Exception as e:
-            st.warning(f"[DEBUG] Não foi possível listar arquivos do diretório cloud: {e}")
     try:
         # Comando completo: usar o mesmo interpretador Python do Streamlit
         cmd_completo = f"{sys.executable} {comando}"
@@ -311,10 +288,28 @@ def executar_comando_com_logs(comando, nome_processo, log_container):
                 logs_completos.append(linha_log)
                 linha_count += 1
                 
-                # Atualizar progresso (estimativa baseada no número de linhas)
-                progress = min(linha_count * 2, 90)  # Max 90% durante execução
+                # Atualizar progresso baseado no conteúdo dos logs
+                if "[LOG]" in output or "PROCESSANDO TÓPICO" in output:
+                    progress = min(linha_count * 3, 85)  # Incremento maior para logs importantes
+                else:
+                    progress = min(linha_count * 1, 85)
                 progress_bar.progress(progress)
-                progress_text.text(f"📊 Processando... ({linha_count} linhas processadas)")
+                
+                # Mensagens de status específicas baseadas no conteúdo
+                if "Iniciando geração de título" in output:
+                    progress_text.text("🎯 Gerando título...")
+                elif "Título gerado" in output:
+                    progress_text.text("✅ Título criado! Gerando artigo...")
+                elif "Iniciando geração do artigo" in output:
+                    progress_text.text("📝 Criando artigo...")
+                elif "Artigo gerado" in output:
+                    progress_text.text("✅ Artigo criado! Publicando...")
+                elif "Publicando post" in output:
+                    progress_text.text("🚀 Publicando no WordPress...")
+                elif "Post publicado" in output or "sucesso" in output.lower():
+                    progress_text.text("✅ Post publicado com sucesso!")
+                else:
+                    progress_text.text(f"📊 Processando... ({linha_count} linhas)")
                 
                 # Mostrar últimas 10 linhas
                 ultimas_linhas = logs_completos[-10:]

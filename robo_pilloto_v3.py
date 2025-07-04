@@ -4,6 +4,7 @@ import sys
 import os
 import requests
 import time
+from datetime import datetime
 from openai import OpenAI
 from requests.auth import HTTPBasicAuth
 import gspread
@@ -33,6 +34,12 @@ except ImportError:
     }
 
 from prompt_manager import get_prompt_titulo, get_prompt_artigo, get_system_prompts
+
+# Função para log com timestamp
+def log_with_timestamp(message):
+    """Adiciona timestamp aos logs"""
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    print(f"[{timestamp}] {message}")
 
 # Validar configurações ao iniciar
 
@@ -106,11 +113,11 @@ print("\n[INFO] *** TÓPICOS AGORA VÊM DA INTERFACE WEB - Google Sheets não é
 
 # === GERAR TÍTULOS E ARTIGOS BASEADOS NOS TÓPICOS DA INTERFACE ===
 for idx, topico_geral in enumerate(topicos, 1):
-    print(f"\n--- PROCESSANDO TÓPICO {idx}/{len(topicos)}: {topico_geral} ---")
-    print(f"[LOG] Iniciando geração de título para o tópico: {topico_geral}")
+    log_with_timestamp(f"--- PROCESSANDO TÓPICO {idx}/{len(topicos)}: {topico_geral} ---")
+    log_with_timestamp(f"[LOG] Iniciando geração de título para o tópico: {topico_geral}")
     try:
         # === GERAR TÍTULO ESPECÍFICO BASEADO NO TÓPICO GERAL ===
-        print("[INFO] Carregando prompt personalizado para título...")
+        log_with_timestamp("[INFO] Carregando prompt personalizado para título...")
         prompt_titulo = get_prompt_titulo(topico_geral)
         system_prompts = get_system_prompts()
 
@@ -125,12 +132,12 @@ for idx, topico_geral in enumerate(topicos, 1):
         )
 
         titulo_especifico = response_titulo.choices[0].message.content.strip().strip('"')
-        print(f"[LOG] Título gerado para '{topico_geral}': {titulo_especifico}")
-        print(f"[EXEMPLO] Título retornado: {titulo_especifico}")
+        log_with_timestamp(f"[LOG] Título gerado para '{topico_geral}': {titulo_especifico}")
+        log_with_timestamp(f"[EXEMPLO] Título retornado: {titulo_especifico}")
 
         # === GERAR ARTIGO BASEADO EM PESQUISA ===
-        print(f"[LOG] Iniciando geração do artigo para o título: {titulo_especifico}")
-        print("[INFO] Carregando prompt personalizado para artigo...")
+        log_with_timestamp(f"[LOG] Iniciando geração do artigo para o título: {titulo_especifico}")
+        log_with_timestamp("[INFO] Carregando prompt personalizado para artigo...")
         prompt_artigo = get_prompt_artigo(titulo_especifico, topico_geral)
 
         response_artigo = client.chat.completions.create(
@@ -144,17 +151,17 @@ for idx, topico_geral in enumerate(topicos, 1):
         )
 
         conteudo = response_artigo.choices[0].message.content.strip()
-        print(f"[LOG] Artigo gerado para '{titulo_especifico}' (tópico: {topico_geral})")
-        print(f"[EXEMPLO] Início do artigo: {conteudo[:200]} ...\n---fim do preview---\n")
+        log_with_timestamp(f"[LOG] Artigo gerado para '{titulo_especifico}' (tópico: {topico_geral})")
+        log_with_timestamp(f"[EXEMPLO] Início do artigo: {conteudo[:200]}...")
 
         # === PUBLICAR POST ===
-        print(f"[LOG] Publicando post '{titulo_especifico}' no WordPress...")
+        log_with_timestamp(f"[LOG] Publicando post '{titulo_especifico}' no WordPress...")
         # ... código de publicação ...
         # Exemplo de resultado:
         # print(f"[RESULTADO] Post publicado com sucesso! URL: https://seusite.com/{slug}")
 
     except Exception as e:
-        print(f"[ERRO] Falha ao processar tópico '{topico_geral}': {e}")
+        log_with_timestamp(f"[ERRO] Falha ao processar tópico '{topico_geral}': {e}")
 
     time.sleep(10)  # Evita bloqueios na API do WordPress
 
