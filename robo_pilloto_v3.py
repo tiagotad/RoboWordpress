@@ -48,8 +48,8 @@ def log_with_timestamp(message):
 # Inicializar cliente OpenAI com configurações atualizadas
 client = OpenAI(
     api_key=OPENAI_API_KEY,
-    timeout=30.0,  # Timeout de 30 segundos
-    max_retries=3   # Máximo 3 tentativas
+    timeout=120.0,  # Timeout padrão de 2 minutos
+    max_retries=2   # Máximo 2 tentativas automáticas (além das nossas manuais)
 )
 
 print("\n--- CARREGANDO TÓPICOS DO GOOGLE SHEETS ---")
@@ -122,6 +122,9 @@ for i, t in enumerate(topicos, 1):
 print("\n[INFO] *** TÓPICOS AGORA VÊM DA INTERFACE WEB - Google Sheets não é mais necessário ***")
 
 # === GERAR TÍTULOS E ARTIGOS BASEADOS NOS TÓPICOS DA INTERFACE ===
+posts_criados = 0
+posts_falharam = 0
+
 for idx, topico_geral in enumerate(topicos, 1):
     log_with_timestamp(f"--- PROCESSANDO TÓPICO {idx}/{len(topicos)}: {topico_geral} ---")
     log_with_timestamp(f"[LOG] Iniciando geração de título para o tópico: {topico_geral}")
@@ -131,18 +134,30 @@ for idx, topico_geral in enumerate(topicos, 1):
         prompt_titulo = get_prompt_titulo(topico_geral)
         system_prompts = get_system_prompts()
 
-        response_titulo = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": system_prompts['titulo']},
-                {"role": "user", "content": prompt_titulo}
-            ],
-            temperature=0.8,  # Mais criatividade para títulos cativantes
-            max_tokens=120
-        )
+        # Retry para geração de título
+        max_retries = 3
+        for tentativa in range(max_retries):
+            try:
+                log_with_timestamp(f"[LOG] Tentativa {tentativa + 1}/{max_retries} - Gerando título...")
+                response_titulo = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {"role": "system", "content": system_prompts['titulo']},
+                        {"role": "user", "content": prompt_titulo}
+                    ],
+                    temperature=0.8,  # Mais criatividade para títulos cativantes
+                    max_tokens=120,
+                    timeout=45  # Timeout específico de 45 segundos
+                )
+                break  # Se chegou aqui, deu certo
+            except Exception as e:
+                log_with_timestamp(f"[AVISO] Tentativa {tentativa + 1} falhou para título: {e}")
+                if tentativa == max_retries - 1:
+                    raise Exception(f"Falha após {max_retries} tentativas na geração do título: {e}")
+                time.sleep(5)  # Aguardar antes de tentar novamente
 
         titulo_especifico = response_titulo.choices[0].message.content.strip().strip('"')
-        log_with_timestamp(f"[LOG] Título gerado para '{topico_geral}': {titulo_especifico}")
+        log_with_timestamp(f"[LOG] ✅ Título gerado para '{topico_geral}': {titulo_especifico}")
         log_with_timestamp(f"[EXEMPLO] Título retornado: {titulo_especifico}")
 
         # === GERAR ARTIGO BASEADO EM PESQUISA ===
@@ -150,18 +165,30 @@ for idx, topico_geral in enumerate(topicos, 1):
         log_with_timestamp("[INFO] Carregando prompt personalizado para artigo...")
         prompt_artigo = get_prompt_artigo(titulo_especifico, topico_geral)
 
-        response_artigo = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": system_prompts['artigo']},
-                {"role": "user", "content": prompt_artigo}
-            ],
-            temperature=0.7,
-            max_tokens=3000
-        )
+        # Retry para geração de artigo
+        for tentativa in range(max_retries):
+            try:
+                log_with_timestamp(f"[LOG] Tentativa {tentativa + 1}/{max_retries} - Gerando artigo (pode levar até 60s)...")
+                response_artigo = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {"role": "system", "content": system_prompts['artigo']},
+                        {"role": "user", "content": prompt_artigo}
+                    ],
+                    temperature=0.7,
+                    max_tokens=3000,
+                    timeout=90  # Timeout maior para artigos (90 segundos)
+                )
+                break  # Se chegou aqui, deu certo
+            except Exception as e:
+                log_with_timestamp(f"[AVISO] Tentativa {tentativa + 1} falhou para artigo: {e}")
+                if tentativa == max_retries - 1:
+                    raise Exception(f"Falha após {max_retries} tentativas na geração do artigo: {e}")
+                log_with_timestamp(f"[INFO] Aguardando 10 segundos antes da próxima tentativa...")
+                time.sleep(10)  # Aguardar mais tempo entre tentativas de artigo
 
         conteudo = response_artigo.choices[0].message.content.strip()
-        log_with_timestamp(f"[LOG] Artigo gerado para '{titulo_especifico}' (tópico: {topico_geral})")
+        log_with_timestamp(f"[LOG] ✅ Artigo gerado para '{titulo_especifico}' (tópico: {topico_geral})")
         log_with_timestamp(f"[EXEMPLO] Início do artigo: {conteudo[:200]}...")
 
         # === PUBLICAR POST ===
@@ -227,9 +254,23 @@ for idx, topico_geral in enumerate(topicos, 1):
         log_with_timestamp(f"[✔] Post {status_msg} com sucesso na categoria '{categoria_desejada}' (autor ID {author_id}): {titulo_especifico}")
         log_with_timestamp(f"[RESULTADO] ✅ Post publicado com sucesso! ID: {post_id}")
         log_with_timestamp(f"[INFO] 🔗 URL do post: {post_url}")
+        posts_criados += 1
 
     except Exception as e:
-        log_with_timestamp(f"[ERRO] ❌ Falha ao processar tópico '{topico_geral}': {e}")
+        log_with_timestamp(f"[ERRO] ❌ Falha ao processar tópico '{topico_geral}': {str(e)}")
+        log_with_timestamp(f"[INFO] Tipo do erro: {type(e).__name__}")
+        posts_falharam += 1
+        
+        # Log específico para tipos de erro comuns
+        if "timeout" in str(e).lower():
+            log_with_timestamp(f"[DICA] 💡 Erro de timeout - a API da OpenAI pode estar sobrecarregada. Tentando próximo tópico...")
+        elif "rate limit" in str(e).lower():
+            log_with_timestamp(f"[DICA] 💡 Rate limit atingido - aguardando 30 segundos...")
+            time.sleep(30)
+        elif "connection" in str(e).lower():
+            log_with_timestamp(f"[DICA] 💡 Problema de conexão - verifique sua internet...")
+        
+        log_with_timestamp(f"[INFO] Continuando com o próximo tópico...")
         continue
 
     time.sleep(10)  # Evita bloqueios na API do WordPress
@@ -237,8 +278,15 @@ for idx, topico_geral in enumerate(topicos, 1):
 # Estatísticas finais
 total_processados = len(topicos)
 log_with_timestamp(f"[INFO] 📊 Estatísticas finais:")
-log_with_timestamp(f"[INFO] ✅ Total de tópicos processados: {total_processados}")
+log_with_timestamp(f"[INFO] ✅ Posts criados com sucesso: {posts_criados}")
+log_with_timestamp(f"[INFO] ❌ Posts que falharam: {posts_falharam}")
+log_with_timestamp(f"[INFO] 📝 Total de tópicos processados: {total_processados}")
 log_with_timestamp(f"[INFO] 🎯 Configuração: Categoria={config_execucao.get('categoria_wp', 'Others')}, Status={config_execucao.get('status_publicacao', 'draft')}")
+
+if posts_criados > 0:
+    log_with_timestamp(f"[INFO] 🎉 Execução bem-sucedida! {posts_criados} posts foram criados.")
+else:
+    log_with_timestamp(f"[AVISO] ⚠️ Nenhum post foi criado. Verifique os erros acima.")
 
 print("\n--- FINALIZADO COM SUCESSO ---")
 print("[INFO] 🎯 Para editar os prompts, use a interface web: streamlit run app.py")

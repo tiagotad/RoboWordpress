@@ -43,8 +43,8 @@ from prompt_manager import get_prompt_titulo, get_prompt_artigo, get_system_prom
 # Inicializar cliente OpenAI com configurações atualizadas
 client = OpenAI(
     api_key=OPENAI_API_KEY,
-    timeout=60.0,  # Timeout maior para geração de imagens
-    max_retries=3   # Máximo 3 tentativas
+    timeout=120.0,  # Timeout maior para geração de imagens e artigos
+    max_retries=2   # Máximo 2 tentativas automáticas
 )
 
 print("\n--- ROBÔ PILLOTO V4 - COM GERAÇÃO DE IMAGENS DALL·E 3 ---")

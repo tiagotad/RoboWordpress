@@ -328,16 +328,24 @@ def executar_comando_com_logs(comando, nome_processo, log_container):
                 # Mensagens de status específicas baseadas no conteúdo
                 if "Iniciando geração de título" in output:
                     progress_text.text("🎯 Gerando título...")
-                elif "Título gerado" in output:
+                elif "Título gerado" in output or "✅ Título gerado" in output:
                     progress_text.text("✅ Título criado! Gerando artigo...")
                 elif "Iniciando geração do artigo" in output:
-                    progress_text.text("📝 Criando artigo...")
-                elif "Artigo gerado" in output:
+                    progress_text.text("📝 Criando artigo... (pode levar até 90s)")
+                elif "Tentativa" in output and "Gerando artigo" in output:
+                    progress_text.text("🔄 Tentando gerar artigo novamente...")
+                elif "Artigo gerado" in output or "✅ Artigo gerado" in output:
                     progress_text.text("✅ Artigo criado! Publicando...")
                 elif "Iniciando publicação" in output or "Publicando post" in output:
                     progress_text.text("🚀 Publicando no WordPress...")
+                elif "timeout" in output.lower():
+                    progress_text.text("⏰ Timeout detectado - tentando novamente...")
+                elif "rate limit" in output.lower():
+                    progress_text.text("⏳ Rate limit - aguardando...")
                 elif any(indicador in output for indicador in ["Post publicado", "✅ Post publicado", "RESULTADO] ✅"]):
                     progress_text.text(f"🎉 Post criado com sucesso! Total: {posts_criados}")
+                elif "ERRO" in output and "Falha ao processar" in output:
+                    progress_text.text("❌ Erro processando tópico - continuando...")
                 elif "sucesso" in output.lower():
                     progress_text.text("✅ Operação realizada com sucesso!")
                 else:
