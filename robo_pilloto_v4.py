@@ -376,15 +376,16 @@ for idx, topico_geral in enumerate(topicos, 1):
         post_id = post_data_response['id']
 
         status_msg = "publicado" if status_publicacao == "publish" else "salvo como rascunho"
-        print(f"[✔] Post {status_msg} com sucesso na categoria '{categoria_desejada}' (autor ID {author_id}): {titulo_especifico}")
+        log_with_timestamp(f"[✔] Post {status_msg} com sucesso na categoria '{categoria_desejada}' (autor ID {author_id}): {titulo_especifico}")
+        log_with_timestamp(f"[RESULTADO] Post publicado com sucesso! ID: {post_id}")
+        log_with_timestamp(f"[INFO] URL do post: {WP_URL}/?p={post_id}")
         
         if media_id:
-            print(f"[✔] 🖼️ Imagem em destaque definida com sucesso!")
+            log_with_timestamp(f"[✔] 🖼️ Imagem em destaque definida com sucesso!")
         else:
-            print(f"[⚠️] Post criado sem imagem em destaque (erro na geração)")
+            log_with_timestamp(f"[⚠️] Post criado sem imagem em destaque (erro na geração)")
         
-        print(f"[INFO] ID do post: {post_id}")
-        print(f"[INFO] Usando prompts personalizados + DALL·E 3")
+        log_with_timestamp(f"[INFO] Usando prompts personalizados + DALL·E 3")
         
         # Limpar arquivo temporário
         if nome_arquivo_img and os.path.exists(nome_arquivo_img):

@@ -253,6 +253,15 @@ def executar_comando_com_logs(comando, nome_processo, log_container):
     timestamp = datetime.now().strftime("%H:%M:%S")
     log_container.info(f"🚀 [{timestamp}] Iniciando execução do {nome_processo}...")
     
+    # Contador de tempo de execução
+    inicio_execucao = datetime.now()
+    contador_tempo = log_container.empty()
+    
+    # Contador de posts criados (exibir desde o início)
+    contador_posts = log_container.empty()
+    posts_criados = 0
+    contador_posts.metric("📝 Posts criados", f"{posts_criados} posts")
+    
     # Barra de progresso
     progress_bar = log_container.progress(0)
     progress_text = log_container.empty()
@@ -295,6 +304,27 @@ def executar_comando_com_logs(comando, nome_processo, log_container):
                     progress = min(linha_count * 1, 85)
                 progress_bar.progress(progress)
                 
+                # Atualizar contador de tempo
+                tempo_decorrido = datetime.now() - inicio_execucao
+                minutos, segundos = divmod(tempo_decorrido.total_seconds(), 60)
+                contador_tempo.metric("⏱️ Tempo de execução", f"{int(minutos):02d}:{int(segundos):02d}")
+                
+                # Atualizar contador de posts quando detectar publicação
+                if any(indicador in output for indicador in [
+                    "Post publicado com sucesso",
+                    "publicado com ID", 
+                    "[RESULTADO] Post publicado",
+                    "✔] Post publicado",
+                    "✔] Post criado",
+                    "✅ Post publicado",
+                    "RESULTADO] ✅ Post publicado"
+                ]):
+                    posts_criados += 1
+                    contador_posts.metric("📝 Posts criados", f"{posts_criados} posts")
+                    # Log adicional para debug
+                    timestamp_debug = datetime.now().strftime("%H:%M:%S")
+                    print(f"[DEBUG {timestamp_debug}] Contador incrementado para {posts_criados} - Detectado: {output.strip()[:100]}")
+                
                 # Mensagens de status específicas baseadas no conteúdo
                 if "Iniciando geração de título" in output:
                     progress_text.text("🎯 Gerando título...")
@@ -304,10 +334,12 @@ def executar_comando_com_logs(comando, nome_processo, log_container):
                     progress_text.text("📝 Criando artigo...")
                 elif "Artigo gerado" in output:
                     progress_text.text("✅ Artigo criado! Publicando...")
-                elif "Publicando post" in output:
+                elif "Iniciando publicação" in output or "Publicando post" in output:
                     progress_text.text("🚀 Publicando no WordPress...")
-                elif "Post publicado" in output or "sucesso" in output.lower():
-                    progress_text.text("✅ Post publicado com sucesso!")
+                elif any(indicador in output for indicador in ["Post publicado", "✅ Post publicado", "RESULTADO] ✅"]):
+                    progress_text.text(f"🎉 Post criado com sucesso! Total: {posts_criados}")
+                elif "sucesso" in output.lower():
+                    progress_text.text("✅ Operação realizada com sucesso!")
                 else:
                     progress_text.text(f"📊 Processando... ({linha_count} linhas)")
                 
@@ -324,18 +356,41 @@ def executar_comando_com_logs(comando, nome_processo, log_container):
         
         # Resultado final
         timestamp = datetime.now().strftime("%H:%M:%S")
+        tempo_total = datetime.now() - inicio_execucao
+        minutos, segundos = divmod(tempo_total.total_seconds(), 60)
+        
         if return_code == 0:
             progress_text.text("✅ Execução concluída com sucesso!")
-            log_container.success(f"✅ [{timestamp}] {nome_processo} executado com sucesso!")
+            contador_tempo.metric("⏱️ Tempo total", f"{int(minutos):02d}:{int(segundos):02d}")
+            contador_posts.metric("📝 Posts criados", f"{posts_criados} posts")
+            
+            # Resumo final detalhado
+            if posts_criados > 0:
+                log_container.success(f"✅ [{timestamp}] {nome_processo} executado com sucesso!")
+                col1, col2, col3 = log_container.columns(3)
+                with col1:
+                    st.metric("⏱️ Tempo total", f"{int(minutos):02d}:{int(segundos):02d}")
+                with col2:
+                    st.metric("📝 Posts criados", f"{posts_criados}")
+                with col3:
+                    if posts_criados > 0:
+                        tempo_por_post = tempo_total.total_seconds() / posts_criados
+                        st.metric("⚡ Tempo/post", f"{tempo_por_post:.1f}s")
+            else:
+                log_container.warning(f"⚠️ [{timestamp}] {nome_processo} executado, mas nenhum post foi criado")
+            
             return {
                 'sucesso': True,
                 'stdout': '\n'.join(logs_completos),
                 'stderr': '',
-                'codigo': return_code
+                'codigo': return_code,
+                'posts_criados': posts_criados
             }
         else:
             progress_text.text("❌ Execução falhou!")
-            log_container.error(f"❌ [{timestamp}] {nome_processo} falhou com código {return_code}")
+            contador_tempo.metric("⏱️ Tempo até falha", f"{int(minutos):02d}:{int(segundos):02d}")
+            contador_posts.metric("📝 Posts criados", f"{posts_criados} posts")
+            log_container.error(f"❌ [{timestamp}] {nome_processo} falhou com código {return_code} após {int(minutos):02d}:{int(segundos):02d}. Posts criados: {posts_criados}")
             return {
                 'sucesso': False,
                 'stdout': '\n'.join(logs_completos),
@@ -345,9 +400,12 @@ def executar_comando_com_logs(comando, nome_processo, log_container):
             
     except subprocess.TimeoutExpired:
         timestamp = datetime.now().strftime("%H:%M:%S")
+        tempo_total = datetime.now() - inicio_execucao
+        minutos, segundos = divmod(tempo_total.total_seconds(), 60)
         progress_bar.progress(0)
         progress_text.text("⏰ Tempo limite excedido!")
-        log_container.error(f"⏰ [{timestamp}] {nome_processo} excedeu tempo limite!")
+        contador_tempo.metric("⏱️ Tempo até timeout", f"{int(minutos):02d}:{int(segundos):02d}")
+        log_container.error(f"⏰ [{timestamp}] {nome_processo} excedeu tempo limite após {int(minutos):02d}:{int(segundos):02d}!")
         return {
             'sucesso': False,
             'stdout': '',
@@ -356,9 +414,12 @@ def executar_comando_com_logs(comando, nome_processo, log_container):
         }
     except Exception as e:
         timestamp = datetime.now().strftime("%H:%M:%S")
+        tempo_total = datetime.now() - inicio_execucao
+        minutos, segundos = divmod(tempo_total.total_seconds(), 60)
         progress_bar.progress(0)
         progress_text.text(f"💥 Erro na execução!")
-        log_container.error(f"💥 [{timestamp}] Erro ao executar {nome_processo}: {str(e)}")
+        contador_tempo.metric("⏱️ Tempo até erro", f"{int(minutos):02d}:{int(segundos):02d}")
+        log_container.error(f"💥 [{timestamp}] Erro ao executar {nome_processo} após {int(minutos):02d}:{int(segundos):02d}: {str(e)}")
         return {
             'sucesso': False,
             'stdout': '',
@@ -656,14 +717,17 @@ with col1:
                             topicos_expandidos = []
                             for topico in topicos_lista:
                                 topicos_expandidos.extend([topico] * int(quantidade_textos))
-                            topicos_str = '\", \"'.join(topicos_expandidos)
+                            
+                            # Criar lista formatada corretamente
+                            topicos_formatados = '", "'.join(topicos_expandidos)
+                            
                             config_exec_code = (
                                 "# Configurações de execução vindas do app.py\n"
                                 "# Este arquivo é gerado automaticamente pelo app.py\n\n"
                                 f"CATEGORIA_WP = \"{categoria_wp}\"\n"
                                 f"STATUS_PUBLICACAO = \"{status_publicacao}\"  # 'draft' ou 'publish'\n"
                                 f"QUANTIDADE_TEXTOS = {quantidade_textos}\n"
-                                f"TOPICOS_LISTA = [\"{topicos_str}\"]\n"
+                                f"TOPICOS_LISTA = [\"{topicos_formatados}\"]\n"
                                 f"AUTHOR_ID = {author_id}\n\n"
                                 "def get_configuracoes_execucao():\n"
                                 "    return {\n"
@@ -691,6 +755,7 @@ with col1:
                         log_container = st.container()
 
                         st.info(f"🎯 Executando com: Categoria={categoria_wp}, Status={status_publicacao}, Tópicos={len(topicos_expandidos)} (N tópicos x {quantidade_textos} textos)")
+                        st.info(f"📝 Debug: Lista expandida tem {len(topicos_expandidos)} entradas: {topicos_expandidos[:3]}{'...' if len(topicos_expandidos) > 3 else ''}")
 
                         # Executar o robô com logs em tempo real
                         resultado = executar_comando_com_logs(robot['arquivo'], robot['nome'], log_container)
