@@ -716,11 +716,11 @@ with st.expander("🎯 CONFIGURE O PROMPT DA IA - Clique para abrir", expanded=T
                 prompts_padrao = get_prompts_padrao()
                 
                 if salvar_prompts(prompts_padrao):
-                    st.success("✅ Prompts restaurados para o padrão!")
+                    st.success("✅ Prompt restaurado para o padrão!")
                     time.sleep(1)
                     st.rerun()
                 else:
-                    st.error("❌ Erro ao restaurar prompts.")
+                    st.error("❌ Erro ao restaurar prompt.")
                 
                 st.session_state['confirm_reset'] = False
             else:
