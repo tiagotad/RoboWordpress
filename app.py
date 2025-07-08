@@ -500,7 +500,12 @@ def executar_comando_com_logs(comando, nome_processo, log_container):
                     "✔] Post publicado",
                     "✔] Post criado",
                     "✅ Post publicado",
-                    "RESULTADO] ✅ Post publicado"
+                    "RESULTADO] ✅ Post publicado",
+                    "✅ Post #",
+                    "criado com sucesso!",
+                    "✅ Post criado com sucesso!",
+                    "✅ Post salvo como rascunho com sucesso!",
+                    "✅ Post publicado com sucesso!"
                 ]):
                     posts_criados += 1
                     contador_posts.metric("📝 Posts criados", f"{posts_criados} posts")
@@ -508,8 +513,30 @@ def executar_comando_com_logs(comando, nome_processo, log_container):
                     timestamp_debug = datetime.now().strftime("%H:%M:%S")
                     print(f"[DEBUG {timestamp_debug}] Contador incrementado para {posts_criados} - Detectado: {output.strip()[:100]}")
                 
+                # Detectar também pela mensagem de progresso
+                if "📊 Progresso:" in output and "posts criados" in output:
+                    try:
+                        # Extrair número da mensagem "📊 Progresso: 1/3 posts criados"
+                        import re
+                        match = re.search(r'(\d+)/\d+ posts criados', output)
+                        if match:
+                            posts_atual = int(match.group(1))
+                            if posts_atual > posts_criados:
+                                posts_criados = posts_atual
+                                contador_posts.metric("📝 Posts criados", f"{posts_criados} posts")
+                                timestamp_debug = datetime.now().strftime("%H:%M:%S")
+                                print(f"[DEBUG {timestamp_debug}] Contador atualizado via progresso para {posts_criados}")
+                    except Exception as e:
+                        print(f"[DEBUG] Erro ao extrair progresso: {e}")
+                
                 # Mensagens de status específicas baseadas no conteúdo
-                if "Iniciando geração de título" in output:
+                if "Gerando conteúdo para:" in output:
+                    progress_text.text("🎯 Gerando conteúdo...")
+                elif "Gerando tags para o artigo" in output:
+                    progress_text.text("🏷️ Criando tags...")
+                elif "📤 Publicando post:" in output:
+                    progress_text.text("🚀 Publicando no WordPress...")
+                elif "Iniciando geração de título" in output:
                     progress_text.text("🎯 Gerando título...")
                 elif "Título gerado" in output or "✅ Título gerado" in output:
                     progress_text.text("✅ Título criado! Gerando artigo...")
