@@ -11,19 +11,35 @@ from datetime import datetime
 from openai import OpenAI
 from requests.auth import HTTPBasicAuth
 
-# Importar configurações
-from config import *
-from config_execucao import get_configuracoes_execucao
-from prompt_manager import get_prompt_completo, get_system_prompt
-
-# Configurações
-client = OpenAI(api_key=OPENAI_API_KEY)
-config = get_configuracoes_execucao()
-
 def log(message):
     """Log com timestamp"""
     timestamp = datetime.now().strftime("%H:%M:%S")
     print(f"[{timestamp}] {message}")
+
+# Importar configurações
+try:
+    # Tentar importar configurações (funciona tanto local quanto cloud)
+    from config import *
+    log("✅ Configurações carregadas com sucesso")
+except ImportError as e:
+    log(f"❌ Erro ao carregar configurações: {e}")
+    log("💡 Certifique-se de que o arquivo config.py existe e as variáveis estão definidas")
+    sys.exit(1)
+
+try:
+    from config_execucao import get_configuracoes_execucao
+    from prompt_manager import get_prompt_completo, get_system_prompt
+    
+    # Configurações
+    client = OpenAI(api_key=OPENAI_API_KEY)
+    config = get_configuracoes_execucao()
+    
+except ImportError as e:
+    log(f"❌ Erro ao importar módulos: {e}")
+    sys.exit(1)
+except Exception as e:
+    log(f"❌ Erro ao inicializar: {e}")
+    sys.exit(1)
 
 def gerar_conteudo(topico):
     """Gera título e artigo usando prompt único"""
