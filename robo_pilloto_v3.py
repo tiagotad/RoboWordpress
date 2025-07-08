@@ -16,15 +16,40 @@ def log(message):
     timestamp = datetime.now().strftime("%H:%M:%S")
     print(f"[{timestamp}] {message}")
 
-# Importar configurações
+# Importar configurações com fallback para Streamlit Cloud
 try:
-    # Tentar importar configurações (funciona tanto local quanto cloud)
+    # Tentar importar config local primeiro
     from config import *
-    log("✅ Configurações carregadas com sucesso")
-except ImportError as e:
-    log(f"❌ Erro ao carregar configurações: {e}")
-    log("💡 Certifique-se de que o arquivo config.py existe e as variáveis estão definidas")
-    sys.exit(1)
+    log("✅ Configurações locais carregadas")
+except ImportError:
+    # Se falhar, tentar config_cloud
+    try:
+        from config_cloud import *
+        log("🌐 Usando configurações do Streamlit Cloud")
+    except ImportError:
+        # Se ambos falharem, usar configurações diretas do Streamlit
+        try:
+            import streamlit as st
+            log("🌐 Usando configurações diretas do Streamlit")
+            
+            # Configurações do WordPress
+            WP_URL = st.secrets["WP_URL"]
+            WP_USER = st.secrets["WP_USER"]
+            WP_PASSWORD = st.secrets["WP_PASSWORD"]
+            
+            # Configurações da OpenAI
+            OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+            
+            # Configurações do Google Sheets
+            GOOGLE_SHEET_ID = st.secrets.get("GOOGLE_SHEET_ID", "")
+            CREDENTIALS_FILE = st.secrets.get("CREDENTIALS_FILE", "credenciais_google.json")
+            
+            log("✅ Configurações do Streamlit carregadas")
+            
+        except Exception as e:
+            log(f"❌ Erro ao carregar configurações: {e}")
+            log("💡 Configure as variáveis no Streamlit Secrets ou arquivo .env local")
+            sys.exit(1)
 
 try:
     from config_execucao import get_configuracoes_execucao
