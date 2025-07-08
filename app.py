@@ -626,119 +626,87 @@ except ImportError:
     st.stop()
 
 # Layout principal
-st.markdown("## 📝 Editor de Prompts Personalizáveis")
+st.markdown("## 📝 Editor de Prompt Personalizável")
 
-# Editor de prompts em destaque
-with st.expander("🎯 CONFIGURE OS PROMPTS DA IA - Clique para abrir", expanded=True):
+# Editor de prompt único em destaque
+with st.expander("🎯 CONFIGURE O PROMPT DA IA - Clique para abrir", expanded=True):
     st.markdown("""
     ### 🔧 Personalize como a IA gera conteúdo
     
-    **🎯 IMPORTANTE:** Use o **Robô Personalizável (v3)** para aplicar os prompts editados aqui.
+    **🎯 IMPORTANTE:** Use o **Robô Personalizável (v3)** para aplicar o prompt editado aqui.
     
     Controle como a IA:
     - **🎭 Gera títulos** baseados nos tópicos da planilha
     - **📝 Cria artigos** completos e otimizados para SEO
+    - **🚀 Tudo em uma única chamada** - mais eficiente e consistente
     """)
     
     # Carregar prompts atuais
     prompts_atuais = carregar_prompts()
     
-    # Tabs para organizar os prompts
-    tab_titulo, tab_artigo = st.tabs(["📰 Prompt para Títulos", "📄 Prompt para Artigos"])
+    # Prompt único
+    st.markdown("### � Como a IA deve gerar título + artigo completo")
+    st.markdown("**Variável disponível:** `{topico_geral}` (será substituído pelo tópico da planilha)")
+    st.markdown("**Formato esperado:** A IA deve retornar o título e o artigo formatados como especificado no prompt")
     
-    with tab_titulo:
-        st.markdown("### 📰 Como a IA deve gerar títulos")
-        st.markdown("**Variável disponível:** `{topico_geral}` (será substituído pelo tópico da planilha)")
-        
-        prompt_titulo_novo = st.text_area(
-            "Edite o prompt do título:",
-            value=prompts_atuais.get('prompt_titulo', ''),
-            height=250,
-            help="Este prompt controla como a IA gera títulos baseados no tópico da planilha Google Sheets",
-            key="prompt_titulo_main"
-        )
-        
-        # System prompt para título
-        system_titulo_novo = st.text_area(
-            "Personalidade da IA para títulos:",
-            value=prompts_atuais.get('system_prompt_titulo', ''),
-            height=80,
-            help="Define como a IA deve se comportar ao gerar títulos",
-            key="system_titulo_main"
-        )
+    prompt_completo_novo = st.text_area(
+        "Edite o prompt completo:",
+        value=prompts_atuais.get('prompt_completo', ''),
+        height=400,
+        help="Este prompt controla como a IA gera tanto o título quanto o artigo completo baseado no tópico da planilha",
+        key="prompt_completo_main"
+    )
     
-    with tab_artigo:
-        st.markdown("### 📄 Como a IA deve gerar artigos completos")
-        st.markdown("**Variáveis disponíveis:** `{titulo_especifico}` (título gerado) e `{topico_geral}` (tópico da planilha)")
-        
-        prompt_artigo_novo = st.text_area(
-            "Edite o prompt do artigo:",
-            value=prompts_atuais.get('prompt_artigo', ''),
-            height=300,
-            help="Este prompt controla como a IA escreve artigos completos baseados no título gerado",
-            key="prompt_artigo_editor"
-        )
-        
-        # System prompt para artigo
-        system_artigo_novo = st.text_area(
-            "Personalidade da IA para artigos:",
-            value=prompts_atuais.get('system_prompt_artigo', ''),
-            height=80,
-            help="Define como a IA deve se comportar ao gerar artigos",
-            key="system_artigo_editor"
-        )
+    # System prompt único
+    system_prompt_novo = st.text_area(
+        "Personalidade da IA:",
+        value=prompts_atuais.get('system_prompt', ''),
+        height=100,
+        help="Define como a IA deve se comportar ao gerar conteúdo",
+        key="system_prompt_main"
+    )
     
     # Botões de ação em destaque
     col_save, col_preview, col_reset = st.columns(3)
     
     with col_save:
-        if st.button("💾 SALVAR PROMPTS", type="primary", use_container_width=True):
+        if st.button("💾 SALVAR PROMPT", type="primary", use_container_width=True):
             novos_prompts = {
-                'prompt_titulo': prompt_titulo_novo,
-                'prompt_artigo': prompt_artigo_novo,
-                'system_prompt_titulo': system_titulo_novo,
-                'system_prompt_artigo': system_artigo_novo
+                'prompt_completo': prompt_completo_novo,
+                'system_prompt': system_prompt_novo
             }
             
             # Validar prompts
             erros = validar_prompts(novos_prompts)
             
             if erros:
-                st.error("❌ Erros encontrados nos prompts:")
+                st.error("❌ Erros encontrados no prompt:")
                 for campo, erro in erros.items():
                     st.error(f"**{campo}:** {erro}")
             else:
                 if salvar_prompts(novos_prompts):
-                    st.success("✅ Prompts salvos com sucesso!")
-                    st.success("🎯 Use o 'Robô Personalizável (v3)' para aplicar os novos prompts!")
+                    st.success("✅ Prompt salvo com sucesso!")
+                    st.success("🎯 Use o 'Robô Personalizável (v3)' para aplicar o novo prompt!")
                     time.sleep(1)
                     st.rerun()
                 else:
-                    st.error("❌ Erro ao salvar prompts.")
+                    st.error("❌ Erro ao salvar prompt.")
     
     with col_preview:
         if st.button("👀 PREVIEW", use_container_width=True):
-            st.markdown("### 🔍 Preview dos Prompts")
+            st.markdown("### 🔍 Preview do Prompt")
             
             exemplo_topico = "Filmes e Cinema"
-            exemplo_titulo = "Os 10 Filmes Mais Aguardados de 2025"
             
-            st.markdown("**📰 Preview Prompt Título:**")
+            st.markdown("**� Preview Prompt Completo:**")
             try:
-                preview_titulo = prompt_titulo_novo.format(topico_geral=exemplo_topico)
-                st.code(preview_titulo[:300] + "..." if len(preview_titulo) > 300 else preview_titulo)
+                preview_completo = prompt_completo_novo.format(topico_geral=exemplo_topico)
+                st.code(preview_completo[:500] + "..." if len(preview_completo) > 500 else preview_completo)
             except Exception as e:
-                st.error(f"Erro no prompt título: {e}")
+                st.error(f"Erro no prompt: {e}")
             
-            st.markdown("**📄 Preview Prompt Artigo:**")
-            try:
-                preview_artigo = prompt_artigo_novo.format(
-                    titulo_especifico=exemplo_titulo,
-                    topico_geral=exemplo_topico
-                )
-                st.code(preview_artigo[:400] + "..." if len(preview_artigo) > 400 else preview_artigo)
-            except Exception as e:
-                st.error(f"Erro no prompt artigo: {e}")
+            st.markdown("**🎭 System Prompt:**")
+            st.code(system_prompt_novo[:200] + "..." if len(system_prompt_novo) > 200 else system_prompt_novo)
     
     with col_reset:
         if st.button("🔄 Restaurar Padrão", use_container_width=True):

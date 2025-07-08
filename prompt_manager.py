@@ -30,47 +30,60 @@ def salvar_prompts(prompts: Dict[str, str]) -> bool:
         print(f"Erro ao salvar prompts: {e}")
         return False
 
-def get_prompt_titulo(topico_geral: str) -> str:
-    """Retorna o prompt formatado para geração de título"""
+def get_prompt_completo(topico_geral: str) -> str:
+    """Retorna o prompt formatado para geração completa (título + artigo)"""
     prompts = carregar_prompts()
-    return prompts['prompt_titulo'].format(topico_geral=topico_geral)
+    return prompts['prompt_completo'].format(topico_geral=topico_geral)
+
+def get_system_prompt() -> str:
+    """Retorna o system prompt único"""
+    prompts = carregar_prompts()
+    return prompts.get('system_prompt', '')
+
+# Funções mantidas para compatibilidade (deprecated)
+def get_prompt_titulo(topico_geral: str) -> str:
+    """[DEPRECATED] Use get_prompt_completo()"""
+    return get_prompt_completo(topico_geral)
 
 def get_prompt_artigo(titulo_especifico: str, topico_geral: str) -> str:
-    """Retorna o prompt formatado para geração de artigo"""
-    prompts = carregar_prompts()
-    return prompts['prompt_artigo'].format(
-        titulo_especifico=titulo_especifico,
-        topico_geral=topico_geral
-    )
+    """[DEPRECATED] Use get_prompt_completo()"""
+    return get_prompt_completo(topico_geral)
 
 def get_system_prompts() -> Dict[str, str]:
-    """Retorna os system prompts"""
-    prompts = carregar_prompts()
+    """[DEPRECATED] Use get_system_prompt()"""
+    system_prompt = get_system_prompt()
     return {
-        'titulo': prompts.get('system_prompt_titulo', ''),
-        'artigo': prompts.get('system_prompt_artigo', '')
+        'titulo': system_prompt,
+        'artigo': system_prompt
     }
 
 def get_prompts_padrao() -> Dict[str, str]:
     """Retorna prompts padrão caso o arquivo não exista"""
     return {
-        "prompt_titulo": "Crie um título SEO otimizado sobre '{topico_geral}'. Retorne apenas o título.",
-        "prompt_artigo": "Escreva um artigo sobre '{titulo_especifico}' relacionado ao tópico '{topico_geral}'.",
-        "system_prompt_titulo": "Você é um especialista em SEO e criação de títulos.",
-        "system_prompt_artigo": "Você é um redator especializado em conteúdo para blogs."
+        "prompt_completo": """Com base no tópico geral '{topico_geral}', crie um artigo completo com título e conteúdo.
+
+O artigo deve:
+• Ter um título SEO otimizado (50-80 caracteres)
+• Conter 1000-1200 palavras
+• Ser estruturado com introdução, desenvolvimento e conclusão
+• Incluir subtítulos H2 e H3
+• Ter tom conversacional e informativo
+• Estar otimizado para SEO
+
+Formato da resposta:
+TÍTULO: [seu título aqui]
+
+ARTIGO:
+[seu artigo completo aqui]""",
+        "system_prompt": "Você é um jornalista especializado em entretenimento e estilo de vida, com amplo conhecimento em filmes, séries de TV, livros, destinos de viagem e tendências culturais. Você cria conteúdos altamente envolventes e otimizados para SEO."
     }
 
 def validar_prompts(prompts: Dict[str, str]) -> Dict[str, str]:
     """Valida se os prompts contêm as variáveis necessárias"""
     erros = {}
     
-    # Verificar prompt_titulo
-    if '{topico_geral}' not in prompts.get('prompt_titulo', ''):
-        erros['prompt_titulo'] = 'Deve conter a variável {topico_geral}'
-    
-    # Verificar prompt_artigo
-    prompt_artigo = prompts.get('prompt_artigo', '')
-    if '{titulo_especifico}' not in prompt_artigo:
-        erros['prompt_artigo'] = 'Deve conter a variável {titulo_especifico}'
+    # Verificar prompt_completo
+    if '{topico_geral}' not in prompts.get('prompt_completo', ''):
+        erros['prompt_completo'] = 'Deve conter a variável {topico_geral}'
     
     return erros

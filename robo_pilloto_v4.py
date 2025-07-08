@@ -48,7 +48,7 @@ except ImportError:
         'quantidade_textos': 3
     }
 
-from prompt_manager import get_prompt_titulo, get_prompt_artigo, get_system_prompts
+from prompt_manager import get_prompt_completo, get_system_prompt
 
 # Inicializar cliente OpenAI com configurações atualizadas
 client = OpenAI(
@@ -269,44 +269,58 @@ print("\n[INFO] *** VERSÃO V4 - AGORA COM GERAÇÃO DE IMAGENS AUTOMÁTICA! ***
 # === GERAR CONTEÚDO + IMAGENS ===
 for idx, topico_geral in enumerate(topicos, 1):
     log_with_timestamp(f"--- PROCESSANDO TÓPICO {idx}/{len(topicos)}: {topico_geral} ---")
-    log_with_timestamp(f"[LOG] Iniciando geração de título para o tópico: {topico_geral}")
+    log_with_timestamp(f"[LOG] Iniciando geração de conteúdo para o tópico: {topico_geral}")
     try:
-        # === GERAR TÍTULO ESPECÍFICO ===
-        log_with_timestamp("[INFO] 📝 Carregando prompt personalizado para título...")
-        prompt_titulo = get_prompt_titulo(topico_geral)
-        system_prompts = get_system_prompts()
+        # === GERAR TÍTULO E ARTIGO COM PROMPT ÚNICO ===
+        log_with_timestamp("[INFO] 📝 Carregando prompt personalizado completo...")
+        prompt_completo = get_prompt_completo(topico_geral)
+        system_prompt = get_system_prompt()
 
-        response_titulo = client.chat.completions.create(
+        response_completo = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": system_prompts['titulo']},
-                {"role": "user", "content": prompt_titulo}
-            ],
-            temperature=0.8,
-            max_tokens=120
-        )
-
-        titulo_especifico = response_titulo.choices[0].message.content.strip().strip('"')
-        log_with_timestamp(f"[LOG] Título gerado para '{topico_geral}': {titulo_especifico}")
-        log_with_timestamp(f"[EXEMPLO] Título retornado: {titulo_especifico}")
-
-        # === GERAR ARTIGO ===
-        log_with_timestamp(f"[LOG] Iniciando geração do artigo para o título: {titulo_especifico}")
-        log_with_timestamp("[INFO] 📄 Carregando prompt personalizado para artigo...")
-        prompt_artigo = get_prompt_artigo(titulo_especifico, topico_geral)
-
-        response_artigo = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": system_prompts['artigo']},
-                {"role": "user", "content": prompt_artigo}
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt_completo}
             ],
             temperature=0.7,
-            max_tokens=3000
+            max_tokens=4000
         )
 
-        conteudo = response_artigo.choices[0].message.content.strip()
-        log_with_timestamp(f"[LOG] Artigo gerado para '{titulo_especifico}' (tópico: {topico_geral})")
+        # Processar resposta completa
+        resposta_completa = response_completo.choices[0].message.content.strip()
+        
+        # Extrair título e artigo da resposta
+        try:
+            # Procurar por padrões de título
+            if "TÍTULO:" in resposta_completa:
+                partes = resposta_completa.split("TÍTULO:", 1)[1].split("ARTIGO:", 1)
+                titulo_especifico = partes[0].strip()
+                conteudo = partes[1].strip() if len(partes) > 1 else ""
+            elif resposta_completa.startswith("#"):
+                # Se começar com #, primeira linha é título
+                linhas = resposta_completa.split("\n", 1)
+                titulo_especifico = linhas[0].strip("# ").strip()
+                conteudo = linhas[1].strip() if len(linhas) > 1 else ""
+            else:
+                # Tentar extrair título da primeira linha
+                linhas = resposta_completa.split("\n", 1)
+                titulo_especifico = linhas[0].strip()
+                conteudo = linhas[1].strip() if len(linhas) > 1 else resposta_completa
+            
+            # Validar se extraiu corretamente
+            if not titulo_especifico or not conteudo:
+                raise ValueError("Não foi possível extrair título ou conteúdo da resposta")
+                
+            log_with_timestamp(f"[LOG] ✅ Título extraído: {titulo_especifico}")
+            log_with_timestamp(f"[LOG] ✅ Artigo gerado ({len(conteudo)} caracteres)")
+            
+        except Exception as e:
+            log_with_timestamp(f"[AVISO] Erro ao processar resposta: {e}")
+            log_with_timestamp("[INFO] Usando resposta completa como artigo e gerando título simples")
+            titulo_especifico = f"Artigo sobre {topico_geral}"
+            conteudo = resposta_completa
+
+        log_with_timestamp(f"[LOG] ✅ Conteúdo gerado para '{titulo_especifico}' (tópico: {topico_geral})")
         log_with_timestamp(f"[EXEMPLO] Início do artigo: {conteudo[:200]}...")
 
         # === GERAR IMAGEM COM DALL·E 3 ===
