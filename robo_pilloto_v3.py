@@ -175,7 +175,7 @@ def criar_tags_wordpress(tags):
 
 def publicar_post(titulo, conteudo, tags):
     """Publica post no WordPress com tags"""
-    log(f"Publicando: {titulo}")
+    log(f"📤 Publicando post: {titulo}")
     
     # Criar tags no WordPress
     tag_ids = criar_tags_wordpress(tags)
@@ -197,8 +197,17 @@ def publicar_post(titulo, conteudo, tags):
     )
     response.raise_for_status()
     
-    post_id = response.json()['id']
-    log(f"✅ Post criado! ID: {post_id} | Tags: {len(tag_ids)}")
+    post_response = response.json()
+    post_id = post_response['id']
+    post_url = post_response.get('link', f"{WP_URL}/?p={post_id}")
+    
+    status_publicacao = config.get('status_publicacao', 'draft')
+    status_msg = "publicado" if status_publicacao == "publish" else "salvo como rascunho"
+    
+    log(f"✅ Post {status_msg} com sucesso!")
+    log(f"📌 ID: {post_id} | Tags: {len(tag_ids)} | Categoria: {config.get('categoria_wp', 32174)}")
+    log(f"🔗 URL: {post_url}")
+    
     return post_id
 
 def main():
@@ -213,6 +222,8 @@ def main():
     log(f"📝 Processando {len(topicos)} tópicos")
     
     posts_criados = 0
+    posts_falharam = 0
+    
     for i, topico in enumerate(topicos, 1):
         try:
             log(f"--- TÓPICO {i}/{len(topicos)}: {topico} ---")
@@ -222,13 +233,29 @@ def main():
             post_id = publicar_post(titulo, artigo, tags)
             posts_criados += 1
             
+            log(f"✅ Post #{posts_criados} criado com sucesso! ID: {post_id}")
+            log(f"📊 Progresso: {posts_criados}/{len(topicos)} posts criados")
+            
             time.sleep(5)  # Pausa entre posts
             
         except Exception as e:
             log(f"❌ Erro no tópico '{topico}': {e}")
+            posts_falharam += 1
             continue
     
-    log(f"🎉 Concluído! {posts_criados} posts criados")
+    # Estatísticas finais
+    log("=" * 50)
+    log("📊 ESTATÍSTICAS FINAIS:")
+    log(f"✅ Posts criados com sucesso: {posts_criados}")
+    log(f"❌ Posts que falharam: {posts_falharam}")
+    log(f"📝 Total de tópicos processados: {len(topicos)}")
+    log(f"� Taxa de sucesso: {(posts_criados/len(topicos)*100):.1f}%")
+    log("=" * 50)
+    
+    if posts_criados > 0:
+        log(f"�🎉 Execução concluída! {posts_criados} posts foram criados com sucesso!")
+    else:
+        log("⚠️ Nenhum post foi criado. Verifique os logs de erro acima.")
 
 if __name__ == "__main__":
     main()
