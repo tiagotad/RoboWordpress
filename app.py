@@ -782,7 +782,7 @@ with col1:
     st.markdown("#### 📝 Tópicos para Gerar Conteúdo")
     topicos_input = st.text_area(
         "Digite os tópicos (um por linha):",
-        value="Filmes e Cinema\nSéries de TV\nHistória e Curiosidades\nViagem e Turismo\nLivros e Literatura",
+        value="Electric Vehicles and Car Reviews\nCharging Technology and Infrastructure\nEV Industry News and Innovations\nSustainable Mobility and Urban Transport\nBattery Technology and Clean Energy",
         height=120,
         help="Digite cada tópico em uma linha separada. Estes tópicos serão usados para gerar os títulos e artigos."
     )
